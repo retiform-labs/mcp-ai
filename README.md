@@ -1,6 +1,6 @@
 # The MCP Aggregation and Integration Library
 
-> **Fork `@sagelabs/mcp-ai`** — Upstream: `@l4t/mcp-ai` by [Mike Cornwell](https://github.com/Leadership-4-Tech/mcp-ai).
+> **Fork `@retiform/mcp-ai`** — Upstream: `@l4t/mcp-ai` by [Mike Cornwell](https://github.com/Leadership-4-Tech/mcp-ai).
 >
 > This fork includes **6 upstream bug fixes** (Zod cross-package detection, async handler
 > compatibility, Kai JSON array handling, SDK v1.29.0+ compatibility, double-wrapped args fix)
@@ -15,7 +15,7 @@ MCP servers are a pretty sweet idea, but having the ability to integrate them al
 ## Installation
 
 ```bash
-npm install @sagelabs/mcp-ai
+npm install @retiform/mcp-ai
 ```
 
 ## Tools
@@ -31,8 +31,8 @@ The following are the tools available in this library
 An integrator is a tool that helps connect an LLM to an MCP server (like the aggregator). It can be used to format tools for the LLM provider, extract tool calls from the LLM response, and execute tool calls.
 
 ```typescript
-import { createIntegrator } from '@sagelabs/mcp-ai/integrator'
-import { Provider } from '@sagelabs/mcp-ai'
+import { createIntegrator } from '@retiform/mcp-ai/integrator'
+import { Provider } from '@retiform/mcp-ai'
 
 // Create an integrator configuration
 const config = {
@@ -88,7 +88,7 @@ An aggregator is a MCP server that can aggregate multiple MCP servers into one. 
 This can also be useful for adapting one type of MCP server to another. For example, if Cursor doesn't support http, you can support an http aggregator by putting a SSE aggregator in front.
 
 ```typescript
-import { create } from '@sagelabs/mcp-ai/aggregator'
+import { create } from '@retiform/mcp-ai/aggregator'
 
 // Create an aggregator configuration
 const config = {
@@ -138,7 +138,7 @@ await server.stop()
 A SimpleServer is a configurable MCP server that can be easily adapted to different protocols (HTTP, SSE, CLI) while maintaining the same tool functionality. This makes it perfect for building custom MCP servers that can be deployed in different environments.
 
 ```typescript
-import { create } from '@sagelabs/mcp-ai/simple-server'
+import { create } from '@retiform/mcp-ai/simple-server'
 
 // Create a simple server configuration
 const config = {
@@ -366,7 +366,7 @@ control via ordering.
 ### Using It in Code
 
 ```typescript
-import { create } from '@sagelabs/mcp-ai/aggregator'
+import { create } from '@retiform/mcp-ai/aggregator'
 
 const config = {
   server: { connection: { type: 'http', port: 3000 } },
@@ -396,7 +396,7 @@ const tools = await server.getTools()
 // tools contains all uniquely-named tools from both MCPs
 ```
 
-Available since `@sagelabs/mcp-ai@1.6.1-guan.0`.
+Available since `@retiform/mcp-ai@1.6.1-guan.0`.
 
 ## Disabling MCP Servers (New in Fork)
 
@@ -436,7 +436,7 @@ The server is logged as skipped via `console.info`.
 - `disabled: false` → server is active (same as omitting the field)
 - `disabled: undefined` → server is active (backward compatible)
 
-Available since `@sagelabs/mcp-ai@1.6.6-guan.0`.
+Available since `@retiform/mcp-ai@1.6.6-guan.0`.
 
 ## Runtime Resilience (New in Fork)
 
@@ -459,14 +459,14 @@ crashing the entire process:
 This means a single broken MCP server can no longer take down your entire
 aggregation gateway.
 
-Available since `@sagelabs/mcp-ai@1.6.6-guan.0`.
+Available since `@retiform/mcp-ai@1.6.6-guan.0`.
 
 ## Running Aggregator (server from CLI)
 
 If you install this library globally it will add the `mcp-aggregator.mts` script to be used for starting up aggregators in any context.
 
 ```bash
-npm i -g @sagelabs/mcp-ai argparse
+npm i -g @retiform/mcp-ai argparse
 ```
 
 Once you have it installed you can:
@@ -800,8 +800,8 @@ GPL-3.0-or-later
 Original library by [Mike Cornwell](https://github.com/Leadership-4-Tech/mcp-ai)<br/>
 — published as `@l4t/mcp-ai`.
 
-This fork maintained by [Guan](https://github.com/sagelabs-dev)<br/>
-— published as [`@sagelabs/mcp-ai`](https://www.npmjs.com/package/@sagelabs/mcp-ai).
+This fork maintained by [Guan](https://github.com/retiform-labs)<br/>
+— published as [`@retiform/mcp-ai`](https://www.npmjs.com/package/@retiform/mcp-ai).
 
 Bug fixes and the `autoPrefix` feature are contributed back upstream via<br/>
 [PR #5](https://github.com/Leadership-4-Tech/mcp-ai/pull/5).
