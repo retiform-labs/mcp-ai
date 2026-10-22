@@ -3,6 +3,7 @@
 import { readFileSync } from 'fs'
 import { parseArgs } from 'node:util'
 import { create } from '../src/aggregator/entries/index.ts'
+import { buildExpressOptionsFromConfig } from '../src/common/middleware/auth-from-config.ts'
 
 async function main() {
   try {
@@ -54,8 +55,12 @@ Arguments:
     // Extract aggregator config - use the whole config if no aggregator property
     const config = fullConfig.aggregator ? fullConfig.aggregator : fullConfig
 
-    // Create and start the server
-    const server = create(config)
+    // Resolve declared server auth at this composition seam: config
+    // declares, the environment supplies (fail-closed — a declared auth
+    // with an unresolvable secret exits here, never boots unauthenticated).
+    // Passing undefined (no auth declared) preserves pre-auth behavior.
+    const expressOptions = buildExpressOptionsFromConfig(config)
+    const server = create(config, expressOptions ? { express: expressOptions } : undefined)
 
     // Handle process termination
     process.on('SIGINT', async () => {

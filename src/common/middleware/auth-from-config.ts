@@ -15,7 +15,7 @@
  * `"type": "beare"` must not silently disable authentication.
  */
 import { createBearerAuthMiddleware, resolveBearerSecret } from './bearer-auth.js'
-import type { BearerAuthConfig, ExpressMiddleware } from '../types.js'
+import type { BearerAuthConfig, ExpressMiddleware, ExpressOptions } from '../types.js'
 
 /** The single auth type this library implements. */
 export const SUPPORTED_AUTH_TYPE = 'bearer' as const
@@ -61,4 +61,35 @@ export const buildAuthMiddlewareFromConnection = (
   }
 
   return [createBearerAuthMiddleware(secret)]
+}
+
+
+/** Minimal structural view of an aggregator config the seam needs. */
+export type AuthDeclaringConfig = Readonly<{
+  server: {
+    connection: AuthDeclaringConnection
+  }
+}>
+
+/**
+ * Build the ExpressOptions to hand to the aggregator's create() from a
+ * full aggregator config. This is the composition-root seam the CLI bin
+ * uses: config declares auth, this resolves it (fail-closed), and the
+ * existing options threading in src/aggregator/entries/index.ts applies
+ * it to the express entries.
+ *
+ * @param config - an aggregator config (http or sse server shape; other
+ *   server types carry no auth field and yield undefined).
+ * @param env - environment record (defaults to process.env; injectable).
+ * @returns ExpressOptions carrying the pre-route auth middleware, or
+ *   undefined when no auth is declared (fully backward compatible).
+ * @throws under the same fail-closed rules as buildAuthMiddlewareFromConnection.
+ */
+export const buildExpressOptionsFromConfig = (
+  config: AuthDeclaringConfig,
+  env: Readonly<Record<string, string | undefined>> = process.env
+): ExpressOptions | undefined => {
+  const middlewares = buildAuthMiddlewareFromConnection(config.server.connection, env)
+  if (middlewares.length === 0) return undefined
+  return { preRouteMiddleware: middlewares }
 }

@@ -15,6 +15,7 @@ import { expect } from 'chai'
 import express from 'express'
 import {
   buildAuthMiddlewareFromConnection,
+  buildExpressOptionsFromConfig,
   DEFAULT_AUTH_ENV,
 } from '../../../src/common/middleware/auth-from-config'
 import type { ExpressMiddleware } from '../../../src/common/types'
@@ -109,5 +110,43 @@ describe('buildAuthMiddlewareFromConnection', () => {
     } finally {
       await new Promise<void>(resolve => server.close(() => resolve()))
     }
+  })
+})
+
+
+describe('buildExpressOptionsFromConfig (bin composition seam)', () => {
+  const httpConfig = (auth?: Record<string, unknown>) =>
+    ({
+      server: {
+        connection: {
+          type: 'http',
+          url: 'http://127.0.0.1:0',
+          ...(auth ? { auth } : {}),
+        },
+      },
+    }) as unknown as Parameters<typeof buildExpressOptionsFromConfig>[0]
+
+  it('returns undefined for a config without auth (bin passes nothing)', () => {
+    expect(buildExpressOptionsFromConfig(httpConfig(), { MCP_API_KEY: SECRET })).to.equal(undefined)
+  })
+
+  it('returns ExpressOptions with one pre-route middleware for declared auth', () => {
+    const options = buildExpressOptionsFromConfig(httpConfig({ type: 'bearer' }), {
+      MCP_API_KEY: SECRET,
+    })
+    expect(options).to.not.equal(undefined)
+    expect(options?.preRouteMiddleware).to.have.lengthOf(1)
+
+    const result = runThrough(options?.preRouteMiddleware?.[0], {
+      authorization: `Bearer ${SECRET}`,
+    })
+    expect(result.nextCalled).to.equal(true)
+    expect(runThrough(options?.preRouteMiddleware?.[0], {}).status).to.equal(401)
+  })
+
+  it('propagates the fail-closed throw from the connection seam', () => {
+    expect(() => buildExpressOptionsFromConfig(httpConfig({ type: 'bearer' }), {})).to.throw(
+      /fail-closed/
+    )
   })
 })
