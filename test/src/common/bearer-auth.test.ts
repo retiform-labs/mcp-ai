@@ -17,7 +17,11 @@
 import { describe, it, afterEach } from 'mocha'
 import { expect } from 'chai'
 import express from 'express'
-import { createBearerAuthMiddleware, extractPresentedKey, resolveBearerSecret } from '../../../src/common/middleware/bearer-auth'
+import {
+  createBearerAuthMiddleware,
+  extractPresentedKey,
+  resolveBearerSecret,
+} from '../../../src/common/middleware/bearer-auth'
 import type { ExpressMiddleware } from '../../../src/common/types'
 
 const SECRET = 'test-secret-key-0123456789'
@@ -27,7 +31,12 @@ const runMiddleware = (
   middleware: ExpressMiddleware,
   headers: Record<string, string | string[]>,
   method = 'POST'
-): { status?: number; wwwAuthenticate?: string; body?: unknown; nextCalled: boolean } => {
+): {
+  status?: number
+  wwwAuthenticate?: string
+  body?: unknown
+  nextCalled: boolean
+} => {
   const captured: {
     status?: number
     wwwAuthenticate?: string
@@ -58,67 +67,104 @@ const runMiddleware = (
 
 describe('extractPresentedKey', () => {
   it('reads a Bearer token (canonical form)', () => {
-    expect(extractPresentedKey({ headers: { authorization: `Bearer ${SECRET}` } })).to.equal(SECRET)
+    expect(
+      extractPresentedKey({ headers: { authorization: `Bearer ${SECRET}` } })
+    ).to.equal(SECRET)
   })
   it('is case-insensitive on the scheme (RFC 6750)', () => {
-    expect(extractPresentedKey({ headers: { authorization: `bearer ${SECRET}` } })).to.equal(SECRET)
-    expect(extractPresentedKey({ headers: { authorization: `BEARER ${SECRET}` } })).to.equal(SECRET)
+    expect(
+      extractPresentedKey({ headers: { authorization: `bearer ${SECRET}` } })
+    ).to.equal(SECRET)
+    expect(
+      extractPresentedKey({ headers: { authorization: `BEARER ${SECRET}` } })
+    ).to.equal(SECRET)
   })
   it('tolerates extra whitespace between scheme and token', () => {
-    expect(extractPresentedKey({ headers: { authorization: `Bearer   ${SECRET}` } })).to.equal(SECRET)
+    expect(
+      extractPresentedKey({ headers: { authorization: `Bearer   ${SECRET}` } })
+    ).to.equal(SECRET)
   })
   it('returns null when the header is absent', () => {
     expect(extractPresentedKey({ headers: {} })).to.equal(null)
   })
   it('returns null on a non-bearer scheme', () => {
-    expect(extractPresentedKey({ headers: { authorization: `Basic ${SECRET}` } })).to.equal(null)
+    expect(
+      extractPresentedKey({ headers: { authorization: `Basic ${SECRET}` } })
+    ).to.equal(null)
   })
   it('returns null on an empty token after the scheme', () => {
-    expect(extractPresentedKey({ headers: { authorization: 'Bearer ' } })).to.equal(null)
-    expect(extractPresentedKey({ headers: { authorization: 'Bearer' } })).to.equal(null)
+    expect(
+      extractPresentedKey({ headers: { authorization: 'Bearer ' } })
+    ).to.equal(null)
+    expect(
+      extractPresentedKey({ headers: { authorization: 'Bearer' } })
+    ).to.equal(null)
   })
   it('reads the x-api-key header as the raw key', () => {
-    expect(extractPresentedKey({ headers: { 'x-api-key': SECRET } })).to.equal(SECRET)
+    expect(extractPresentedKey({ headers: { 'x-api-key': SECRET } })).to.equal(
+      SECRET
+    )
   })
   it('prefers authorization when both headers are present', () => {
     expect(
       extractPresentedKey({
-        headers: { authorization: `Bearer ${SECRET}`, 'x-api-key': 'other-key' },
+        headers: {
+          authorization: `Bearer ${SECRET}`,
+          'x-api-key': 'other-key',
+        },
       })
     ).to.equal(SECRET)
   })
   it('ignores array-typed header values (not acceptable presentations)', () => {
-    expect(extractPresentedKey({ headers: { 'x-api-key': [SECRET] } })).to.equal(null)
+    expect(
+      extractPresentedKey({ headers: { 'x-api-key': [SECRET] } })
+    ).to.equal(null)
   })
   it('falls through to x-api-key when authorization is malformed', () => {
     expect(
-      extractPresentedKey({ headers: { authorization: 'garbage', 'x-api-key': SECRET } })
+      extractPresentedKey({
+        headers: { authorization: 'garbage', 'x-api-key': SECRET },
+      })
     ).to.equal(SECRET)
   })
 })
 
 describe('resolveBearerSecret', () => {
   it('returns the value when set', () => {
-    expect(resolveBearerSecret('MCP_API_KEY', { MCP_API_KEY: SECRET })).to.equal(SECRET)
+    expect(
+      resolveBearerSecret('MCP_API_KEY', { MCP_API_KEY: SECRET })
+    ).to.equal(SECRET)
   })
   it('returns null when the variable is unset', () => {
     expect(resolveBearerSecret('MCP_API_KEY', {})).to.equal(null)
   })
   it('returns null when the variable is empty', () => {
-    expect(resolveBearerSecret('MCP_API_KEY', { MCP_API_KEY: '' })).to.equal(null)
+    expect(resolveBearerSecret('MCP_API_KEY', { MCP_API_KEY: '' })).to.equal(
+      null
+    )
   })
   it('returns null when the variable is whitespace-only', () => {
-    expect(resolveBearerSecret('MCP_API_KEY', { MCP_API_KEY: '   ' })).to.equal(null)
+    expect(resolveBearerSecret('MCP_API_KEY', { MCP_API_KEY: '   ' })).to.equal(
+      null
+    )
   })
   it('trims surrounding whitespace from a valid value', () => {
-    expect(resolveBearerSecret('MCP_API_KEY', { MCP_API_KEY: `  ${SECRET}  ` })).to.equal(SECRET)
+    expect(
+      resolveBearerSecret('MCP_API_KEY', { MCP_API_KEY: `  ${SECRET}  ` })
+    ).to.equal(SECRET)
   })
   it('honors a custom environment variable name', () => {
-    expect(resolveBearerSecret('CUSTOM_VAR', { CUSTOM_VAR: SECRET })).to.equal(SECRET)
-    expect(resolveBearerSecret('CUSTOM_VAR', { MCP_API_KEY: SECRET })).to.equal(null)
+    expect(resolveBearerSecret('CUSTOM_VAR', { CUSTOM_VAR: SECRET })).to.equal(
+      SECRET
+    )
+    expect(resolveBearerSecret('CUSTOM_VAR', { MCP_API_KEY: SECRET })).to.equal(
+      null
+    )
   })
   it('defaults to MCP_API_KEY', () => {
-    expect(resolveBearerSecret(undefined, { MCP_API_KEY: SECRET })).to.equal(SECRET)
+    expect(resolveBearerSecret(undefined, { MCP_API_KEY: SECRET })).to.equal(
+      SECRET
+    )
   })
 })
 
@@ -126,7 +172,9 @@ describe('createBearerAuthMiddleware (direct invocation)', () => {
   const middleware = createBearerAuthMiddleware(SECRET)
 
   it('calls next() on a matching Bearer token', () => {
-    const result = runMiddleware(middleware, { authorization: `Bearer ${SECRET}` })
+    const result = runMiddleware(middleware, {
+      authorization: `Bearer ${SECRET}`,
+    })
     expect(result.nextCalled).to.equal(true)
     expect(result.status).to.equal(undefined)
   })
@@ -142,7 +190,9 @@ describe('createBearerAuthMiddleware (direct invocation)', () => {
     expect((result.body as { status: number }).status).to.equal(401)
   })
   it('401s on a wrong key', () => {
-    const result = runMiddleware(middleware, { authorization: 'Bearer wrong-key' })
+    const result = runMiddleware(middleware, {
+      authorization: 'Bearer wrong-key',
+    })
     expect(result.status).to.equal(401)
     expect(result.wwwAuthenticate).to.equal('Bearer')
     expect(result.nextCalled).to.equal(false)
@@ -161,7 +211,9 @@ describe('createBearerAuthMiddleware (direct invocation)', () => {
     expect(result.status).to.equal(undefined)
   })
   it('accepts a key with surrounding whitespace in the header value', () => {
-    const result = runMiddleware(middleware, { authorization: ` Bearer  ${SECRET}  ` })
+    const result = runMiddleware(middleware, {
+      authorization: ` Bearer  ${SECRET}  `,
+    })
     expect(result.nextCalled).to.equal(true)
   })
 })
@@ -232,7 +284,9 @@ describe('bearer-auth on a real express app (ephemeral port, fetch)', () => {
     })
     const port = await listen(app)
 
-    const preflight = await fetch(`http://127.0.0.1:${port}/`, { method: 'OPTIONS' })
+    const preflight = await fetch(`http://127.0.0.1:${port}/`, {
+      method: 'OPTIONS',
+    })
     expect(preflight.status).to.not.equal(401)
   })
 })

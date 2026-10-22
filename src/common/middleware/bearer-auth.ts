@@ -34,6 +34,9 @@ const PRESENTATION_HEADERS = ['authorization', 'x-api-key'] as const
 /** The `Authorization` scheme this middleware accepts. */
 const BEARER_PREFIX = 'bearer '
 
+/** HTTP status for a failed or absent API key presentation. */
+const HTTP_UNAUTHORIZED = 401
+
 /** sha256 a string to a fixed-length buffer for timing-safe comparison. */
 const sha256 = (value: string): Buffer =>
   createHash('sha256').update(value, 'utf8').digest()
@@ -46,25 +49,29 @@ const sha256 = (value: string): Buffer =>
 export const extractPresentedKey = (
   req: Pick<import('express').Request, 'headers'>
 ): string | null => {
-  for (const header of PRESENTATION_HEADERS) {
+  // First acceptable presentation wins (authorization has precedence over
+  // x-api-key). Presented via a pure projection + find rather than an
+  // imperative loop (functional style).
+  const presented = PRESENTATION_HEADERS.map(header => {
     const raw = req.headers[header]
-    if (typeof raw !== 'string') continue // absent or array-typed → not acceptable
+    if (typeof raw !== 'string') {return null} // absent or array-typed → not acceptable
 
     const trimmed = raw.trim()
-    if (trimmed.length === 0) continue
+    if (trimmed.length === 0) {return null}
 
     if (header === 'authorization') {
       // RFC 6750: case-insensitive scheme, single space, non-empty token.
       const lower = trimmed.toLowerCase()
-      if (!lower.startsWith(BEARER_PREFIX)) continue
+      if (!lower.startsWith(BEARER_PREFIX)) {return null}
       const token = trimmed.slice(BEARER_PREFIX.length).trim()
       return token.length > 0 ? token : null
     }
 
     // x-api-key: the raw header value is the key.
     return trimmed
-  }
-  return null
+  }).find(value => value !== null)
+
+  return presented ?? null
 }
 
 /**
@@ -75,7 +82,9 @@ export const extractPresentedKey = (
  * @returns an express middleware that 401s any request without a matching
  *   key and calls next() otherwise.
  */
-export const createBearerAuthMiddleware = (secret: string): ExpressMiddleware => {
+export const createBearerAuthMiddleware = (
+  secret: string
+): ExpressMiddleware => {
   const expected = sha256(secret)
 
   const middleware: ExpressMiddleware = async (req, res, next) => {
@@ -87,20 +96,20 @@ export const createBearerAuthMiddleware = (secret: string): ExpressMiddleware =>
 
     const presented = extractPresentedKey(req)
     if (presented === null) {
-      res.status(401).set('WWW-Authenticate', 'Bearer').json({
+      res.status(HTTP_UNAUTHORIZED).set('WWW-Authenticate', 'Bearer').json({
         error: 'Unauthorized',
         message: 'Missing API key',
-        status: 401,
+        status: HTTP_UNAUTHORIZED,
       })
       return
     }
 
     const match = timingSafeEqual(sha256(presented), expected)
     if (!match) {
-      res.status(401).set('WWW-Authenticate', 'Bearer').json({
+      res.status(HTTP_UNAUTHORIZED).set('WWW-Authenticate', 'Bearer').json({
         error: 'Unauthorized',
         message: 'Invalid API key',
-        status: 401,
+        status: HTTP_UNAUTHORIZED,
       })
       return
     }
@@ -129,7 +138,7 @@ export const resolveBearerSecret = (
   env: Readonly<Record<string, string | undefined>> = process.env
 ): string | null => {
   const value = env[envName]
-  if (typeof value !== 'string') return null
+  if (typeof value !== 'string') {return null}
   const trimmed = value.trim()
   return trimmed.length > 0 ? trimmed : null
 }

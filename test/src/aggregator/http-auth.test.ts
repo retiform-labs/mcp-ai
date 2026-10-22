@@ -49,7 +49,9 @@ const INITIALIZE_BODY = JSON.stringify({
 })
 
 /** Compose + start exactly as the bin does; resolve the real bound port. */
-const startAsBin = async (config: McpAggregatorHttpConfig): Promise<net.Server> => {
+const startAsBin = async (
+  config: McpAggregatorHttpConfig
+): Promise<net.Server> => {
   const expressOptions = buildExpressOptionsFromConfig(
     config as unknown as Parameters<typeof buildExpressOptionsFromConfig>[0],
     { MCP_API_KEY: SECRET }
@@ -80,7 +82,11 @@ afterEach(async () => {
 const post = async (
   port: number,
   headers: Record<string, string> = {}
-): Promise<{ status: number; wwwAuthenticate?: string; sessionId?: string }> => {
+): Promise<{
+  status: number
+  wwwAuthenticate?: string
+  sessionId?: string
+}> => {
   const res = await fetch(`http://127.0.0.1:${port}/`, {
     method: 'POST',
     // The MCP streamable HTTP transport rejects requests without the

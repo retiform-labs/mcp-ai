@@ -14,8 +14,15 @@
  * Unknown auth types throw for the same reason: a typo like
  * `"type": "beare"` must not silently disable authentication.
  */
-import { createBearerAuthMiddleware, resolveBearerSecret } from './bearer-auth.js'
-import type { BearerAuthConfig, ExpressMiddleware, ExpressOptions } from '../types.js'
+import type {
+  BearerAuthConfig,
+  ExpressMiddleware,
+  ExpressOptions,
+} from '../types.js'
+import {
+  createBearerAuthMiddleware,
+  resolveBearerSecret,
+} from './bearer-auth.js'
 
 /** The single auth type this library implements. */
 export const SUPPORTED_AUTH_TYPE = 'bearer' as const
@@ -43,7 +50,7 @@ export const buildAuthMiddlewareFromConnection = (
   env: Readonly<Record<string, string | undefined>> = process.env
 ): ExpressMiddleware[] => {
   const auth = connection?.auth
-  if (!auth) return []
+  if (!auth) {return []}
 
   if (auth.type !== SUPPORTED_AUTH_TYPE) {
     throw new Error(
@@ -62,7 +69,6 @@ export const buildAuthMiddlewareFromConnection = (
 
   return [createBearerAuthMiddleware(secret)]
 }
-
 
 /** Minimal structural view of an aggregator config the seam needs. */
 export type AuthDeclaringConfig = Readonly<{
@@ -89,7 +95,10 @@ export const buildExpressOptionsFromConfig = (
   config: AuthDeclaringConfig,
   env: Readonly<Record<string, string | undefined>> = process.env
 ): ExpressOptions | undefined => {
-  const middlewares = buildAuthMiddlewareFromConnection(config.server.connection, env)
-  if (middlewares.length === 0) return undefined
+  const middlewares = buildAuthMiddlewareFromConnection(
+    config.server.connection,
+    env
+  )
+  if (middlewares.length === 0) {return undefined}
   return { preRouteMiddleware: middlewares }
 }

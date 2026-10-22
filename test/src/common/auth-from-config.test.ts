@@ -22,24 +22,33 @@ import type { ExpressMiddleware } from '../../../src/common/types'
 
 const SECRET = 'config-secret-key-9876543210'
 
-const runThrough = (middleware: ExpressMiddleware | undefined, headers: Record<string, string>) => {
+const runThrough = (
+  middleware: ExpressMiddleware | undefined,
+  headers: Record<string, string>
+) => {
   let nextCalled = false
   let status: number | undefined
-  middleware?.({ headers, method: 'POST' } as unknown as import('express').Request, {
-    status(code: number) {
-      status = code
-      return { set: () => this, json: () => undefined }
-    },
-  } as unknown as import('express').Response, () => {
-    nextCalled = true
-  })
+  middleware?.(
+    { headers, method: 'POST' } as unknown as import('express').Request,
+    {
+      status(code: number) {
+        status = code
+        return { set: () => this, json: () => undefined }
+      },
+    } as unknown as import('express').Response,
+    () => {
+      nextCalled = true
+    }
+  )
   return { nextCalled, status }
 }
 
 describe('buildAuthMiddlewareFromConnection', () => {
   it('returns an empty array when no auth is declared (backward compat)', () => {
     expect(buildAuthMiddlewareFromConnection({})).to.deep.equal([])
-    expect(buildAuthMiddlewareFromConnection({ auth: undefined })).to.deep.equal([])
+    expect(
+      buildAuthMiddlewareFromConnection({ auth: undefined })
+    ).to.deep.equal([])
   })
 
   it('builds one gating middleware when declared with a resolvable secret', () => {
@@ -49,7 +58,9 @@ describe('buildAuthMiddlewareFromConnection', () => {
     )
     expect(middleware).to.be.a('function')
 
-    expect(runThrough(middleware, { authorization: `Bearer ${SECRET}` }).nextCalled).to.equal(true)
+    expect(
+      runThrough(middleware, { authorization: `Bearer ${SECRET}` }).nextCalled
+    ).to.equal(true)
     expect(runThrough(middleware, {}).status).to.equal(401)
   })
 
@@ -58,18 +69,23 @@ describe('buildAuthMiddlewareFromConnection', () => {
       { auth: { type: 'bearer', env: 'MY_KEY_VAR' } },
       { MY_KEY_VAR: SECRET }
     )
-    expect(runThrough(middleware, { 'x-api-key': SECRET }).nextCalled).to.equal(true)
+    expect(runThrough(middleware, { 'x-api-key': SECRET }).nextCalled).to.equal(
+      true
+    )
   })
 
   it('throws (fail-closed) when auth is declared but the env variable is unset', () => {
-    expect(() => buildAuthMiddlewareFromConnection({ auth: { type: 'bearer' } }, {})).to.throw(
-      /MCP_API_KEY/
-    )
+    expect(() =>
+      buildAuthMiddlewareFromConnection({ auth: { type: 'bearer' } }, {})
+    ).to.throw(/MCP_API_KEY/)
   })
 
   it('throws (fail-closed) when the env variable is empty', () => {
     expect(() =>
-      buildAuthMiddlewareFromConnection({ auth: { type: 'bearer' } }, { MCP_API_KEY: '' })
+      buildAuthMiddlewareFromConnection(
+        { auth: { type: 'bearer' } },
+        { MCP_API_KEY: '' }
+      )
     ).to.throw(/fail-closed/)
   })
 
@@ -99,7 +115,10 @@ describe('buildAuthMiddlewareFromConnection', () => {
     await new Promise(resolve => server.once('listening', resolve))
     const port = (server.address() as { port: number }).port
     try {
-      const bare = await fetch(`http://127.0.0.1:${port}/`, { method: 'POST', body: '{}' })
+      const bare = await fetch(`http://127.0.0.1:${port}/`, {
+        method: 'POST',
+        body: '{}',
+      })
       expect(bare.status).to.equal(401)
       const keyed = await fetch(`http://127.0.0.1:${port}/`, {
         method: 'POST',
@@ -112,7 +131,6 @@ describe('buildAuthMiddlewareFromConnection', () => {
     }
   })
 })
-
 
 describe('buildExpressOptionsFromConfig (bin composition seam)', () => {
   const httpConfig = (auth?: Record<string, unknown>) =>
@@ -127,13 +145,18 @@ describe('buildExpressOptionsFromConfig (bin composition seam)', () => {
     }) as unknown as Parameters<typeof buildExpressOptionsFromConfig>[0]
 
   it('returns undefined for a config without auth (bin passes nothing)', () => {
-    expect(buildExpressOptionsFromConfig(httpConfig(), { MCP_API_KEY: SECRET })).to.equal(undefined)
+    expect(
+      buildExpressOptionsFromConfig(httpConfig(), { MCP_API_KEY: SECRET })
+    ).to.equal(undefined)
   })
 
   it('returns ExpressOptions with one pre-route middleware for declared auth', () => {
-    const options = buildExpressOptionsFromConfig(httpConfig({ type: 'bearer' }), {
-      MCP_API_KEY: SECRET,
-    })
+    const options = buildExpressOptionsFromConfig(
+      httpConfig({ type: 'bearer' }),
+      {
+        MCP_API_KEY: SECRET,
+      }
+    )
     expect(options).to.not.equal(undefined)
     expect(options?.preRouteMiddleware).to.have.lengthOf(1)
 
@@ -141,12 +164,14 @@ describe('buildExpressOptionsFromConfig (bin composition seam)', () => {
       authorization: `Bearer ${SECRET}`,
     })
     expect(result.nextCalled).to.equal(true)
-    expect(runThrough(options?.preRouteMiddleware?.[0], {}).status).to.equal(401)
+    expect(runThrough(options?.preRouteMiddleware?.[0], {}).status).to.equal(
+      401
+    )
   })
 
   it('propagates the fail-closed throw from the connection seam', () => {
-    expect(() => buildExpressOptionsFromConfig(httpConfig({ type: 'bearer' }), {})).to.throw(
-      /fail-closed/
-    )
+    expect(() =>
+      buildExpressOptionsFromConfig(httpConfig({ type: 'bearer' }), {})
+    ).to.throw(/fail-closed/)
   })
 })
