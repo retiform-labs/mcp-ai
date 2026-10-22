@@ -130,6 +130,15 @@ export type HttpServerConfig = Readonly<{
      */
     host?: string
     headers?: Readonly<Record<string, string>>
+    /**
+     * Server-side authentication. When declared, every non-OPTIONS request
+     * must present the API key (Authorization: Bearer or x-api-key) or
+     * receive 401 + WWW-Authenticate: Bearer. The secret itself is NEVER a
+     * config value: it is read from the environment at startup (env names
+     * the variable, default MCP_API_KEY) and a missing secret refuses to
+     * boot (fail-closed).
+     */
+    auth?: BearerAuthConfig
     timeout?: number
     retry?: Readonly<{
       attempts: number
@@ -171,6 +180,11 @@ export type SseServerConfig = Readonly<{
      * (default `::`), preserving pre-1.6.7 behavior.
      */
     host?: string
+    /**
+     * Server-side authentication (same contract as the HTTP connection:
+     * config declares, environment supplies, fail-closed at startup).
+     */
+    auth?: BearerAuthConfig
   }>
   /** Path to establish SSE connection. Defaults to '/' */
   path?: string
@@ -307,6 +321,22 @@ export type OpenAPISchema = Readonly<{
     >
   >
   required?: Readonly<string[]>
+}>
+
+/**
+ * Server-side bearer authentication declaration.
+ *
+ * Config DECLARES, the environment SUPPLIES: `env` names the environment
+ * variable holding the API key (default `MCP_API_KEY`). The key value must
+ * never appear in this config file (configs leak into backups, logs, and
+ * version control). When `auth` is declared and the named environment
+ * variable is unset/empty at startup, the server MUST refuse to boot —
+ * fail-closed (see src/common/middleware/bearer-auth.ts).
+ */
+export type BearerAuthConfig = Readonly<{
+  type: 'bearer'
+  /** Environment variable holding the API key. Default: MCP_API_KEY. */
+  env?: string
 }>
 
 export type ExpressRoute = Readonly<{
