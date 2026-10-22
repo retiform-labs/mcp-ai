@@ -30,9 +30,10 @@ API key as `Authorization: Bearer <key>` or `x-api-key: <key>`.
 
 ### Tests
 
-38 new tests (27 middleware unit incl. real-express fetch smoke,
-8 construction-seam, 6 aggregator http e2e over real sockets —
-401/200/session establishment/backward compat). Suite: 80 passing.
+44 new tests (27 middleware unit incl. real-express fetch smoke,
+11 construction-seam, 6 aggregator http e2e over real sockets —
+401/200/session establishment/backward compat). Suite: 80 passing
+(36 baseline + 44 new).
 
 
 ## [1.6.7-guan.0] — 2026-09-13
