@@ -477,6 +477,65 @@ mcp-aggregator.js ./path-to-your-config.json
 
 This is very useful for running this as a server process, in something like a docker container.
 
+## Server Authentication (New in v1.7.0)
+
+Aggregator HTTP and SSE servers can require an API key on every request.
+
+### Declaring auth
+
+Add an `auth` object to the server connection in your config:
+
+```json
+{
+  "aggregator": {
+    "server": {
+      "connection": {
+        "type": "http",
+        "url": "http://127.0.0.1:12001",
+        "port": 12001,
+        "auth": {
+          "type": "bearer",
+          "env": "MCP_API_KEY"
+        }
+      }
+    }
+  }
+}
+```
+
+- `type` must be `"bearer"`.
+- `env` names the environment variable holding the API key. Default:
+  `MCP_API_KEY`.
+
+### Supplying the key
+
+The key itself is **never a config value** — configs leak into backups,
+logs, and version control. Set the named environment variable before
+starting the server:
+
+```bash
+export MCP_API_KEY="$(openssl rand -hex 32)"
+mcp-aggregator.js ./config.json
+```
+
+### Behavior
+
+- Requests must present the key as `Authorization: Bearer <key>` or
+  `x-api-key: <key>` (checked in that order).
+- Comparison is constant-time (sha256 + `crypto.timingSafeEqual`).
+- Missing or wrong key: `401` with a `WWW-Authenticate: Bearer` header
+  (RFC 6750). No key material is ever echoed.
+- `OPTIONS` preflight requests pass through without credentials, so
+  browser CORS clients keep working.
+- **Fail-closed:** if `auth` is declared but the environment variable is
+  unset or empty, the server **refuses to start**. A server configured
+  for auth never boots unauthenticated.
+
+### Client side
+
+Any MCP client that can set custom headers works out of the box — add a
+header `Authorization: Bearer <your-key>` to the client's server entry.
+
 ## Overview
 
 This library is made up of two different domains.

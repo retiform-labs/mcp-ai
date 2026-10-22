@@ -1,6 +1,6 @@
 {
   "name": "@retiform/mcp-ai",
-  "version": "1.6.9-guan.0",
+  "version": "1.7.0-guan.0",
   "description": "A set of tools for making integration and aggregation of MCP servers extremely easy. Forked from @l4t/mcp-ai by Mike Cornwell, with compatibility fixes and tool namespace prefixing.",
   "keywords": [
     "AI",
