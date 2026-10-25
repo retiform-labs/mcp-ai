@@ -1,6 +1,6 @@
 {
   "name": "@retiform/mcp-ai",
-  "version": "1.7.1-guan.0",
+  "version": "1.7.1",
   "description": "A set of tools for making integration and aggregation of MCP servers extremely easy. Forked from @l4t/mcp-ai by Mike Cornwell, with compatibility fixes and tool namespace prefixing.",
   "keywords": [
     "AI",
@@ -13,14 +13,15 @@
     "integration"
   ],
   "license": "GPL-3.0-or-later",
-  "author": "Mike Cornwell <mike@mikecornwell.com>",
+  "author": "Guan <guan@retiform.dev>",
   "contributors": [
+    "Mike Cornwell <mike@mikecornwell.com>",
     "Guan <guan@retiform.dev>"
   ],
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "mcp-aggregator": "./bin/mcp-aggregator.js"
+    "mcp-aggregator": "./dist/bin/mcp-aggregator.js"
   },
   "config": {
     "commitizen": {
@@ -31,7 +32,7 @@
     "build": "./bin/build.sh",
     "build:watch": "nodemon -e '*' --watch ./src --exec \"npm run build || exit 1\"",
     "commit": "cz",
-    "dist": "npm run build && cd dist && npm publish",
+    "dist": "npm run build && npm publish",
     "eslint": "eslint .",
     "prettier": "prettier --write .",
     "prettier:check": "prettier -c .",

@@ -396,7 +396,7 @@ const tools = await server.getTools()
 // tools contains all uniquely-named tools from both MCPs
 ```
 
-Available since `@retiform/mcp-ai@1.6.1-guan.0`.
+Available since `1.6.1`.
 
 ## Disabling MCP Servers (New in Fork)
 
@@ -436,7 +436,7 @@ The server is logged as skipped via `console.info`.
 - `disabled: false` → server is active (same as omitting the field)
 - `disabled: undefined` → server is active (backward compatible)
 
-Available since `@retiform/mcp-ai@1.6.6-guan.0`.
+Available since `1.6.6`.
 
 ## Runtime Resilience (New in Fork)
 
@@ -459,7 +459,7 @@ crashing the entire process:
 This means a single broken MCP server can no longer take down your entire
 aggregation gateway.
 
-Available since `@retiform/mcp-ai@1.6.6-guan.0`.
+Available since `1.6.6`.
 
 ## Running Aggregator (server from CLI)
 
@@ -477,7 +477,7 @@ mcp-aggregator.js ./path-to-your-config.json
 
 This is very useful for running this as a server process, in something like a docker container.
 
-## Server Authentication (New in v1.7.0)
+## Server Authentication (New in v1.7)
 
 Aggregator HTTP and SSE servers can require an API key on every request.
 
@@ -826,7 +826,9 @@ A complete configuration combining both integrator and aggregator:
 
 ## Testing
 
-There are a few examples included in the
+The test suite runs with `npm test` (mocha + tsx). It covers the aggregator,
+integrator and simple-server paths, plus the bearer-auth middleware and its
+aggregator HTTP end-to-end behaviour over real sockets.
 
 ### Environment Variables
 

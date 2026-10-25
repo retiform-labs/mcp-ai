@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.7.1] — 2026-10-25
+
+### Changed: standard semver, and professional package identity
+
+- **Version scheme normalized to plain semver.** Every prior release carried a
+  `-guan.0` prerelease suffix, which makes npm treat the version as a
+  prerelease — so a bare `npm install @retiform/mcp-ai` did not resolve to it.
+  `1.7.1` is the first release that satisfies ordinary semver ranges
+  (`^1.7.0`, `~1.7`, `latest`). The previously published `1.7.0-guan.0` and
+  `1.7.1-guan.0` remain on the registry, unchanged and still installable by
+  exact version.
+- **`author` is now `Guan <guan@retiform.dev>`.** Mike Cornwell retains his
+  copyright and contributor credit (see `COPYRIGHTS` and the `contributors`
+  field); this changes who is named as the maintainer of this fork, not who
+  wrote the original library.
+
+### Added: `COPYRIGHTS` ships in the package
+
+The GPL copyright notice now travels with the published tarball instead of
+living only in the repository.
+
+### Fixed: README
+
+- The `## Testing` section was a truncated sentence; it now describes what the
+  suite covers.
+- Version citations that named a scope in which those versions never existed
+  (`@retiform/mcp-ai@1.6.1-guan.0`, `1.6.6-guan.0`) now cite plain versions —
+  they were published under an earlier package name.
+
 ## [1.7.0-guan.0] — 2026-10-22
 
 ### Added: optional bearer-token auth for aggregator HTTP/SSE servers
