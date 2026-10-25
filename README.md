@@ -461,19 +461,66 @@ aggregation gateway.
 
 Available since `1.6.6`.
 
+## Socket Binding: host and port
+
+HTTP and SSE servers bind on `port` and, optionally, `host`. Both are set on
+the server connection object - never at the top level.
+
+```json
+{
+  "aggregator": {
+    "server": {
+      "connection": {
+        "type": "http",
+        "url": "http://127.0.0.1:12001",
+        "port": 12001,
+        "host": "127.0.0.1"
+      }
+    }
+  }
+}
+```
+
+- `port` defaults to **3000**.
+- `host` is **omitted by default**, which means Node binds **all interfaces**
+  (`0.0.0.0` and `::`) - so a default install is reachable from the network,
+  not just loopback.
+- Set `host` to `"127.0.0.1"` to bind loopback only. This matters behind a
+  reverse proxy, on a shared host, or any time the port should not be exposed
+  directly. It is the difference between "listening" and "exposed".
+
+`url` is documentation for clients - it does not affect the bind. If you set
+`host`, keep `url` consistent with it or a reader will infer the wrong
+reachability.
+
+```bash
+# verify what actually got bound
+ss -tlnp | grep 12001
+```
+
+Applies to the aggregator `http` and `sse` entries and to all three simple
+server entries (`http`, `stateless-http`, `sse`).
+
+Available since `1.6.7`.
+
 ## Running Aggregator (server from CLI)
 
-If you install this library globally it will add the `mcp-aggregator.mts` script to be used for starting up aggregators in any context.
+Installing this library globally adds an `mcp-aggregator` command for starting
+aggregators in any context.
 
 ```bash
-npm i -g @retiform/mcp-ai argparse
+npm i -g @retiform/mcp-ai
 ```
 
-Once you have it installed you can:
+Once installed:
 
 ```bash
-mcp-aggregator.js ./path-to-your-config.json
+mcp-aggregator ./path-to-your-config.json
 ```
+
+No extra flags are needed: argument parsing uses Node built-in
+`node:util.parseArgs`, so there is no `argparse` dependency and nothing else
+to install. `--help` (`-h`) and `--version` (`-v`) are supported.
 
 This is very useful for running this as a server process, in something like a docker container.
 
@@ -515,7 +562,7 @@ starting the server:
 
 ```bash
 export MCP_API_KEY="$(openssl rand -hex 32)"
-mcp-aggregator.js ./config.json
+mcp-aggregator ./config.json
 ```
 
 ### Behavior
@@ -826,13 +873,32 @@ A complete configuration combining both integrator and aggregator:
 
 ## Testing
 
-The test suite runs with `npm test` (mocha + tsx). It covers the aggregator,
-integrator and simple-server paths, plus the bearer-auth middleware and its
-aggregator HTTP end-to-end behaviour over real sockets.
+```bash
+npm test                # mocha + tsx, 80 tests
+npm run test:coverage   # same suite under c8 (cobertura, lcov, html)
+```
+
+The suite runs entirely offline - no provider keys and no network calls. Every
+entry path binds an ephemeral port, so a run needs no reserved ports and does
+not collide with a running service. Coverage, by concern:
+
+- **Tool namespace prefixing** - prefix resolution, name composition, and
+  collision resolution when two MCPs expose the same tool name.
+- **Runtime resilience** - the `disabled` flag, plus connect, `getTools` and
+  `executeTool` behaviour when one MCP fails while others stay healthy.
+- **Bearer authentication** - header extraction, secret resolution (including
+  fail-closed when the env var is unset), the middleware invoked directly, and
+  a real express app exercised end-to-end over a socket with `fetch`.
+- **Socket binding** - `connection.host` and `connection.port` on the
+  aggregator HTTP/SSE entries and the simple server, each with a
+  backward-compatibility case for the omitted field, plus an e2e assertion
+  that a non-bound interface refuses the connection.
+- **Schema conversion** - `openApiToZodSchema`, including enum enforcement and
+  rejection of malformed property tokens.
 
 ### Environment Variables
 
-Depending on the provider, you may need to set these environment variables for tests:
+No environment variables are required. If you add tests that call a real provider, export the matching key:
 
 - OpenAI: `OPENAI_API_KEY`
 - Claude: `ANTHROPIC_API_KEY`
@@ -844,7 +910,7 @@ Depending on the provider, you may need to set these environment variables for t
 - For HTTP and SSE servers, the `port` field is optional and defaults to 3000
 - The `path` field in server configurations is optional and defaults to '/'
 - For SSE servers, the `messagesPath` field is optional and defaults to '/messages'
-- `maxParallelCalls` is optional and defaults to 1 for integrators and 10 for servers
+- `maxParallelCalls` is optional and defaults to 10 for both integrators and servers
 
 ## Contributing
 

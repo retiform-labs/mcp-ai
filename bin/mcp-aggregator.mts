@@ -1,7 +1,9 @@
 #!/usr/bin/env tsx
 
 import { readFileSync } from 'fs'
+import { dirname, join } from 'node:path'
 import { parseArgs } from 'node:util'
+import { fileURLToPath } from 'node:url'
 import { create } from '../src/aggregator/entries/index.ts'
 import { buildExpressOptionsFromConfig } from '../src/common/middleware/auth-from-config.ts'
 
@@ -21,6 +23,20 @@ async function main() {
       allowPositionals: true,
     })
 
+    if (values.version) {
+      // Resolve against this script's own location, never the caller's cwd:
+      // a globally installed bin runs from an arbitrary directory, where
+      // ./package.json reads an unrelated file (or throws). ../package.json is
+      // correct in BOTH layouts - bin/ in the repo, and dist/bin/ once built
+      // (build.sh copies package.json into dist/).
+      const here = dirname(fileURLToPath(import.meta.url))
+      const packageJson = JSON.parse(
+        readFileSync(join(here, '..', 'package.json'), 'utf-8')
+      )
+      console.info(`mcp-aggregator v${packageJson.version}`)
+      process.exit(0)
+    }
+
     if (values.help || positionals.length === 0) {
       console.info(`
 Usage: mcp-aggregator [options] <config-file>
@@ -34,12 +50,6 @@ Options:
 Arguments:
   config-file    Path to the configuration file (required)
 `)
-      process.exit(0)
-    }
-
-    if (values.version) {
-      const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'))
-      console.info(`mcp-aggregator v${packageJson.version}`)
       process.exit(0)
     }
 

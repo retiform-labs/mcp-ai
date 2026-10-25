@@ -1,5 +1,37 @@
 # Changelog
 
+## [1.7.2] - 2026-10-25
+
+### Fixed: the CLI documented two ways that did not work
+
+Both were found by installing the published tarball and running it, not by
+reading it.
+
+- ** printed usage instead of a version.** The
+   guard ran before the version check, so a bare
+   fell through to help. The version block now runs first.
+- ** printed  from any other directory.** The version
+  was read from  resolved against the caller's working
+  directory, so a globally installed command read an unrelated file or threw.
+  It now resolves against the script's own location, which is correct in both
+  layouts ( in the repo,  once built).
+
+### Fixed: documentation that disagreed with the code
+
+- **The CLI was documented as  and as requiring
+  .** Neither is true: binaries install as , and
+  argument parsing uses Node's built-in , so there is no
+  extra dependency.
+- ** was undocumented**, despite shipping in 1.6.7. Without
+  it a server binds all interfaces by default; there is now a Socket Binding
+  section covering both fields, their defaults, and how to verify the actual
+  bind.
+- ** was documented as defaulting to 1 for integrators.**
+  It defaults to 10, same as servers.
+- ** claimed provider environment variables were needed.** The
+  suite is offline; it now says so, states the real test count, and describes
+  coverage by concern.
+
 ## [1.7.1] — 2026-10-25
 
 ### Changed: standard semver, and professional package identity
