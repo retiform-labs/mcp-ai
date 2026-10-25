@@ -15,7 +15,7 @@
   "license": "GPL-3.0-or-later",
   "author": "Mike Cornwell <mike@mikecornwell.com>",
   "contributors": [
-    "Guan <just.guan@proton.me>"
+    "Guan <guan@retiform.dev>"
   ],
   "type": "module",
   "main": "dist/index.js",
