@@ -22,7 +22,7 @@
   "main": "dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "mcp-aggregator": "./dist/bin/mcp-aggregator.js"
+    "mcp-aggregator": "dist/bin/mcp-aggregator.js"
   },
   "config": {
     "commitizen": {
