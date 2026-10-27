@@ -223,6 +223,23 @@ export type McpAggregatorConfigBase = Readonly<{
        * @default false (absence = active, backward compatible)
        */
       disabled?: boolean
+      /**
+       * Per-tool filter. When set, only the named tools from this MCP server
+       * are exposed through the aggregator. Names match the UPSTREAM tool name
+       * as reported by the server, NOT the aggregated prefixed name. Combined
+       * with denyTools, deny wins. An empty array denies every tool from this
+       * server (a deliberate empty list, not an unset one).
+       * @default undefined (absence = no allow filtering, backward compatible)
+       */
+      allowTools?: readonly string[]
+      /**
+       * Per-tool filter. The named tools from this MCP server are never exposed
+       * through the aggregator and cannot be routed by name. Names match the
+       * UPSTREAM tool name, NOT the aggregated prefixed name. Evaluated before
+       * allowTools, so deny always wins.
+       * @default undefined (absence = nothing denied, backward compatible)
+       */
+      denyTools?: readonly string[]
     }>[]
   >
   maxParallelCalls?: number

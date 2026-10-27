@@ -1,5 +1,49 @@
 # Changelog
 
+## [1.9.0] - 2026-10-27
+
+### Added: per-tool allow and deny lists
+
+An MCP server can expose a hundred tools when you only want three. Each `mcps[]`
+entry now accepts `allowTools` and `denyTools`, narrowing what that one server
+contributes to the aggregated roster.
+
+```json
+{
+  "id": "bank",
+  "allowTools": ["get_balance", "list_transactions"],
+  "connection": { "type": "http", "url": "https://mcp.example.com" }
+}
+```
+
+Both fields are optional and both are inert when absent, so existing configs
+behave exactly as they did before. Deny wins when both name the same tool.
+`allowTools: []` denies everything from that server: an empty list is a
+deliberate lock-out, not an absence, and treating it as "unset" would turn a
+lock-out into a no-op.
+
+Entries are matched against the **upstream** tool name, not the aggregated
+prefixed name your client sees, so changing `prefix` or `autoPrefix` cannot
+silently widen or narrow what was granted. A configured name that matches no
+advertised tool triggers a startup warning naming every unmatched entry, so a
+typo surfaces instead of filtering nothing.
+
+A denied tool is not advertised and cannot be called: it never enters the
+routing map, so `executeTool` rejects it as unknown. There is no code path that
+reaches the upstream server by name. Filtering runs before prefix composition,
+so a dropped tool does not consume a collision slot and rename a tool that is
+actually served.
+
+This is a visibility control on the aggregator, not a substitute for scopes.
+Where a server offers a credential-boundary scope, prefer that; use this when
+it does not, or as a second layer.
+
+### Note on version numbering
+
+`1.8.0` (OAuth for http children) was committed but never published to the
+registry, so `1.9.0` is the release that carries both changes. The 1.8.0 entry
+below is kept as the record of when that work landed.
+
 ## [1.8.0] - 2026-10-27
 
 ### Added: OAuth 2.1 for http children

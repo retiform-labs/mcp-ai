@@ -6,6 +6,7 @@ import {
   Connection,
 } from '../common/types.js'
 import { createTransport } from '../common/libs.js'
+import { filterTools } from './tool-filter.js'
 
 const DEFAULT_MAX_PARALLEL_CALLS = 10
 const DEFAULT_TOOL_TIMEOUT_MS = 180_000 // 3 minutes, configurable via aggregator.toolTimeoutMs
@@ -184,15 +185,26 @@ const create = (config: McpAggregatorConfig, deps?: AggregatorDeps) => {
     getTools: async () => {
       toolRouting = {}
       const existingNames = new Set<string>()
+      const unmatchedFilterEntries = new Set<string>()
       const allTools = await asyncMap(
         Object.entries(clients),
         async ([mcpId, client]) => {
           // Per-client try/catch: one failed listTools() doesn't kill all tool discovery
           // eslint-disable-next-line functional/no-try-statements
           try {
-            const tools = await client.listTools().then(x => x.tools)
+            const rawTools = await client.listTools().then(x => x.tools)
             // Find the MCP config entry for this client to resolve prefix
             const mcpConfig = config.mcps.find(mcp => mcp.id === mcpId)
+            // Per-tool allow/deny filter, applied on the UPSTREAM name before
+            // prefix composition and collision resolution. Filtering later
+            // would let a dropped tool consume a collision slot and force an
+            // invisible rename on a tool that is actually served.
+            const tools = filterTools(
+              mcpId,
+              rawTools,
+              mcpConfig,
+              unmatchedFilterEntries
+            )
             const mcpPrefix = mcpConfig
               ? resolveMcpPrefix(mcpConfig, config.autoPrefix)
               : ''
@@ -231,7 +243,15 @@ const create = (config: McpAggregatorConfig, deps?: AggregatorDeps) => {
         },
         config.maxParallelCalls || DEFAULT_MAX_PARALLEL_CALLS
       )
-      return allTools.flat()
+      const keptTools = allTools.flat()
+      if (unmatchedFilterEntries.size > 0) {
+        console.warn(
+          'Tool filter entries matched no upstream tool: ' +
+            [...unmatchedFilterEntries].join(', ') +
+            '. Entries match the UPSTREAM tool name, not the prefixed name.'
+        )
+      }
+      return keptTools
     },
     executeTool: async (toolName: string, params: any) => {
       // Parse any stringified JSON in params (defensive fix for Kai stringification bug)

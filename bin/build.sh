@@ -5,7 +5,15 @@ echo "Cleaning dist directory..."
 rm -Rf ./dist
 
 echo "Running TypeScript compiler..."
-tsc -p ./tsconfig.json --skipLibCheck
+# Resolve the compiler from this package rather than PATH: a bare `tsc` only
+# works when a global install happens to be present, which makes the build
+# environment-dependent and fails with a misleading `tsc: command not found`.
+TSC="./node_modules/.bin/tsc"
+if [ ! -x "$TSC" ]; then
+  echo "error: ./node_modules/.bin/tsc not found - run npm install first" >&2
+  exit 1
+fi
+"$TSC" -p ./tsconfig.json --skipLibCheck
 
 echo "Copying package.json and README.md..."
 cp package.json ./dist

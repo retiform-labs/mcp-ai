@@ -438,6 +438,77 @@ The server is logged as skipped via `console.info`.
 
 Available since `1.6.6`.
 
+## Per-Tool Filtering (New in v1.9)
+
+An MCP server can expose a hundred tools when you want three. `allowTools` and
+`denyTools` narrow what one server contributes to the aggregated roster:
+
+```json
+{
+  "mcps": [
+    {
+      "id": "bank",
+      "allowTools": ["get_balance", "list_transactions", "get_account"],
+      "connection": {
+        "type": "http",
+        "url": "https://mcp.example.com",
+        "oauth": {
+          "tokenFile": "~/.mcp/oauth/bank.json",
+          "redirectUrl": "http://127.0.0.1:8899/cb",
+          "scopes": ["accounts:read"],
+          "allowedScopes": ["accounts:read"]
+        }
+      }
+    },
+    {
+      "id": "browser",
+      "denyTools": ["evaluate_js", "upload_file"],
+      "connection": { "type": "cli", "path": "npx", "args": ["-y", "browser-mcp"] }
+    }
+  ]
+}
+```
+
+### Semantics
+
+| Configuration | Result |
+|---|---|
+| neither field | every tool from that server, exactly as before |
+| `allowTools: ["a"]` | only `a` |
+| `denyTools: ["a"]` | everything except `a` |
+| both, naming the same tool | **denied** — deny wins |
+| `allowTools: []` | **nothing** — an empty list is a lock-out, not an absence |
+
+An absent field means "no filtering on this axis". An empty array means "nothing
+allowed", which is why `allowTools: []` disables a server's tools without
+removing its config. `denyTools: []` denies nothing, as you would expect.
+
+### Names are the UPSTREAM names
+
+Entries match the tool name as the server reports it, **not** the aggregated
+name your client sees. With `id: "bank"` and `autoPrefix`, the served name is
+`bank_get_balance`; you write `get_balance`. This is deliberate: the filter is
+about the capability, so a later change to `prefix` or `autoPrefix` cannot
+silently widen or narrow what you granted.
+
+If a configured name matches no upstream tool, startup logs a warning naming
+every unmatched entry. The check runs against the server's advertised list, so
+a typo or a renamed tool surfaces instead of quietly filtering nothing.
+
+### What a denied tool looks like
+
+It is not advertised and it cannot be called. Denied tools never enter the
+routing map, so `executeTool` rejects them as unknown — there is no path that
+reaches the upstream server by name. Filtering happens before prefix
+composition, so a dropped tool also does not consume a collision slot and
+rename a tool that is actually served.
+
+This is a visibility control on the aggregator, not a substitute for scopes.
+Prefer removing the capability at the credential boundary when the server
+offers one; use this when it does not, or as a second layer.
+
+Available since `1.9.0`.
+
 ## Runtime Resilience (New in Fork)
 
 The aggregator is designed to survive individual MCP server failures without
@@ -997,7 +1068,7 @@ A complete configuration combining both integrator and aggregator:
 ## Testing
 
 ```bash
-npm test                # mocha + tsx, 123 tests
+npm test                # mocha + tsx, 140 tests
 npm run test:coverage   # same suite under c8 (cobertura, lcov, html)
 ```
 
