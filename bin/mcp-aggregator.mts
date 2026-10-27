@@ -7,7 +7,6 @@ import { fileURLToPath } from 'node:url'
 import { create } from '../src/aggregator/entries/index.ts'
 import { buildExpressOptionsFromConfig } from '../src/common/middleware/auth-from-config.ts'
 import { login, loadAggregatorConfig } from '../src/common/oauth/login.ts'
-import type { OAuthClientConfig } from '../src/common/types.ts'
 
 /**
  * Resolve one child's oauth block from a config file and run the flow.
@@ -15,7 +14,7 @@ import type { OAuthClientConfig } from '../src/common/types.ts'
  * Errors carry the config path and child id because a login failure with no
  * context is the expensive kind: it costs a consent and tells you nothing.
  */
-async function runLogin(configPath: string, mcpId: string): Promise<void> {
+async function runLogin(configPath, mcpId) {
   const { mcps } = loadAggregatorConfig(configPath)
   const entry = mcps.find((m) => m.id === mcpId)
   if (!entry) {
@@ -23,7 +22,7 @@ async function runLogin(configPath: string, mcpId: string): Promise<void> {
       `No MCP with id '${mcpId}' in '${configPath}'. Available: ${mcps.map((m) => m.id).join(', ')}`
     )
   }
-  const connection = entry.connection as { type?: string; url?: string; oauth?: OAuthClientConfig }
+  const connection = entry.connection
   if (connection.type !== 'http' || !connection.url) {
     throw new Error(`MCP '${mcpId}' is not an http connection; OAuth login does not apply to it.`)
   }

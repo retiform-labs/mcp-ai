@@ -583,6 +583,129 @@ mcp-aggregator ./config.json
 Any MCP client that can set custom headers works out of the box — add a
 header `Authorization: Bearer <your-key>` to the client's server entry.
 
+## OAuth for HTTP Children (New in v1.8)
+
+An `http` child can present OAuth 2.1 credentials. Discovery, dynamic client
+registration, PKCE (S256), code exchange, and refresh-on-401 are handled by the
+MCP SDK; this library supplies the persistent state it delegates to, and adds
+one guarantee the protocol itself does not give you.
+
+**`auth` and `oauth` are different things.** `auth` on a *server* connection is
+the credential **we demand** from inbound callers. `oauth` on an *http client*
+connection is the credential **we obtain** from somebody else's resource
+server. They are deliberately not the same key.
+
+### Declaring it
+
+```json
+{
+  "aggregator": {
+    "mcps": [
+      {
+        "id": "example",
+        "connection": {
+          "type": "http",
+          "url": "https://mcp.example.com",
+          "oauth": {
+            "tokenFile": "/home/me/.config/mcp-oauth/example.json",
+            "redirectUrl": "http://127.0.0.1:8899/cb",
+            "scopes": ["user:read", "records:read"],
+            "allowedScopes": ["user:read", "records:read"],
+            "clientName": "my-aggregator",
+            "userAgent": "my-aggregator/1.0"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `tokenFile` | Where tokens, client registration, the PKCE verifier and discovery state are kept. Written atomically at mode `600`. |
+| `redirectUrl` | Loopback redirect URI. Must be `http://127.0.0.1:<port>/<path>` or `http://localhost:<port>/<path>`, with an explicit port. |
+| `scopes` | What we **ask for** — sent as the authorization request's `scope` and as the client metadata `scope`. |
+| `allowedScopes` | The most we will ever **store**. See the guarantee below. |
+| `clientName` | Sent with dynamic client registration. |
+| `userAgent` | User-Agent for the OAuth HTTP calls. Set this if the provider's endpoints sit behind a WAF that rejects default library agents with a bare `403`. |
+
+### The one-shot login
+
+Authorization is **not** part of server startup. A server never waits for a
+human: it reads the tokens it finds and starts without any child it cannot
+authenticate, so one unavailable resource server cannot hold up the rest.
+
+Run the flow once, separately:
+
+```bash
+mcp-aggregator login ./config.json example
+```
+
+It prints an authorization URL, waits on the configured loopback port, and
+writes the token file. Then start (or restart) the aggregator normally.
+
+The redirect is loopback, which the authorization server requires and which
+means **the browser must run on the same machine as the `login` process**.
+Loopback is machine-wide rather than per-user, so any local account's browser
+works. If the port is already bound, an earlier login is probably still
+running; if the window is closed before the confirmation page loads, the code
+never arrives and the command times out rather than reporting a false success.
+
+### Scope enforcement at the credential boundary
+
+This is the part worth knowing about, because the protocol does not give it to
+you.
+
+The SDK resolves the requested scope as:
+
+```
+explicit scope  ??  the resource server's advertised scope list  ??  our client metadata scope
+```
+
+A resource server that advertises a broader set than you want therefore
+**outranks your own client metadata**, and it can cause a scope you did not
+intend to be *asked for*. You cannot reliably prevent that from the client
+side.
+
+What you *can* control is what gets **kept**. Every token is validated against
+`allowedScopes` before it is written. If the grant includes a scope outside
+that list, `saveTokens()` throws, names the offending scope, and **persists
+nothing** — so a token carrying an over-broad grant can never reach a later
+request. This also holds for a refresh response that omits `scope` (meaning
+"unchanged"): the previously accepted grant is re-validated rather than waved
+through.
+
+Use `scopes` to ask for what you need and `allowedScopes` to state the ceiling.
+They are usually identical. They are separate so that the ceiling cannot be
+widened by the far side.
+
+### Token file handling
+
+- Written atomically: temp file plus `rename`, so a concurrent reader sees the
+  previous complete file or the new one, never a truncated one. A crash
+  therefore cannot cost you a refresh token.
+- Created at mode `600`, set at `open()` rather than after the write, so the
+  file is never briefly readable by others.
+- **Read is fail-closed.** A token file whose group or other bits are set is
+  refused with an instruction to `chmod 600`, not used with a warning. `400` is
+  accepted, since owner-read-only is a legitimate tightening.
+- Corrupt JSON is refused rather than treated as "no tokens" — re-authorizing
+  over a file you may need to inspect is worse than stopping.
+
+### State and CSRF
+
+The provider generates and persists an OAuth `state` value per authorization
+attempt, and `login` compares it against the value that comes back. The SDK
+mints and sends a state when a provider supplies one, but does not compare it
+on return, so without this check a forged callback would be
+indistinguishable from a genuine one.
+
+### Headers
+
+`connection.headers` is honored on `http` connections. Set static headers
+there; use `oauth` for anything that has to be refreshed.
+
 ## Overview
 
 This library is made up of two different domains.
@@ -874,7 +997,7 @@ A complete configuration combining both integrator and aggregator:
 ## Testing
 
 ```bash
-npm test                # mocha + tsx, 80 tests
+npm test                # mocha + tsx, 123 tests
 npm run test:coverage   # same suite under c8 (cobertura, lcov, html)
 ```
 

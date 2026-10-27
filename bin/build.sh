@@ -24,3 +24,10 @@ sed -i '1c\#!/usr/bin/env node' ./dist/bin/mcp-aggregator.js
 sed -i -e 's/..\/src\//..\//g' ./dist/bin/mcp-aggregator.js
 # Fix all .ts extensions in import statements
 sed -i -e 's/\.ts/\.js/g' ./dist/bin/mcp-aggregator.js
+
+echo "Verifying the emitted bin parses..."
+# This file is copied verbatim as .js, never compiled, so TypeScript syntax in
+# it is a runtime SyntaxError that only appears when the package is installed
+# and run. Parsing it here turns that into a build failure instead.
+node --check ./dist/bin/mcp-aggregator.js
+echo "bin parses cleanly"

@@ -1,5 +1,81 @@
 # Changelog
 
+## [1.8.0] - 2026-10-27
+
+### Added: OAuth 2.1 for http children
+
+An `http` child can now present OAuth 2.1 credentials. Discovery, dynamic
+client registration, PKCE S256, code exchange, refresh-on-401 and the circuit
+breaker against post-auth recursion all come from the MCP SDK; this adds the
+persistent state it delegates to, plus a guarantee the protocol does not give
+you.
+
+Declare an `oauth` block on the connection, run
+`mcp-aggregator login <config> <mcp-id>` once, and the child authenticates from
+then on. Authorization is deliberately NOT part of startup: children connect
+through `Promise.allSettled`, so a blocking authorization await would be
+swallowed and silently park that child forever. Serving reads tokens it finds
+and never waits on a human.
+
+### Added: scope enforcement at the credential boundary
+
+The SDK resolves the requested scope as
+`explicit ?? server-advertised ?? client-metadata`, so a resource server that
+advertises more than the client wants outranks the client's own metadata. The
+requested scope therefore cannot be fully controlled from the client side.
+
+What IS controllable is what gets kept. `saveTokens()` validates the granted
+scope against `allowedScopes` and, if the grant exceeds it, throws and persists
+NOTHING - naming the offending scope. A token carrying an over-broad grant can
+never reach a later request. This also covers a refresh response that omits
+`scope` (legal, meaning "unchanged"): the previously accepted grant is
+re-validated rather than waved through.
+
+### Added: token file handling that fails closed
+
+Written atomically (temp file plus rename) at mode 600, with the mode set at
+`open()` so the file is never briefly readable by others. A token file whose
+group or other bits are set is REFUSED on read with an instruction to chmod,
+rather than used with a warning; 400 is accepted as a legitimate tightening.
+Corrupt JSON is refused rather than treated as "no tokens".
+
+### Added: CSRF validation the SDK leaves to the client
+
+The provider generates and persists an OAuth `state` value per authorization
+attempt and `login` compares it against the value that returns. The SDK mints
+and sends a state when a provider supplies one but does not compare it on
+return, so a forged callback would otherwise be indistinguishable from a real
+one.
+
+### Fixed: connection.headers was silently dropped on http children
+
+`createTransport()` constructed `StreamableHTTPClientTransport` with no options
+at all, discarding the entire options object - so `connection.headers` never
+reached the request. It went unnoticed because the only http child in use
+authenticates with a query-string token, which is luck rather than design.
+`createTransport()` now calls `toMcpConfig()`, which already built the correct
+options and had zero callers.
+
+### Fixed: a login listener that deadlocked on close
+
+`finish()` resolved inside `server.close()`'s callback, which never fires while
+an HTTP client holds a keep-alive connection open - so every callback test hung
+until timeout. It now closes, drops lingering connections via
+`closeAllConnections()`, and settles immediately.
+
+### Changed
+
+- The `login` subcommand is documented in `--help`.
+- README gained an "OAuth for HTTP Children" section covering declaration, the
+  login flow, the scope guarantee, token-file handling, and the loopback
+  redirect constraint.
+
+### Compatibility
+
+An `http` connection without an `oauth` block produces the same transport
+behaviour as 1.7.2, now with its `headers` actually honored - which is a
+behavioural fix for anyone who configured them and was silently ignored.
+
 ## [1.7.2] - 2026-10-25
 
 ### Fixed: the CLI documented two ways that did not work

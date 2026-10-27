@@ -29,8 +29,8 @@ describe('login — redirect URL validation', () => {
   })
 
   it('refuses a non-loopback redirect URL', () => {
-    expect(() => portFromRedirectUrl('https://mcp.example.com/onepay/cb')).to.throw(/loopback/)
-    expect(() => portFromRedirectUrl('http://192.168.8.210:8899/cb')).to.throw(/loopback/)
+    expect(() => portFromRedirectUrl('https://mcp.example.com/cb')).to.throw(/loopback/)
+    expect(() => portFromRedirectUrl('http://10.20.30.40:8899/cb')).to.throw(/loopback/)
   })
 
   it('refuses something that is not a URL at all', () => {
