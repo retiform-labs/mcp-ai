@@ -6,6 +6,37 @@ import { parseArgs } from 'node:util'
 import { fileURLToPath } from 'node:url'
 import { create } from '../src/aggregator/entries/index.ts'
 import { buildExpressOptionsFromConfig } from '../src/common/middleware/auth-from-config.ts'
+import { login, loadAggregatorConfig } from '../src/common/oauth/login.ts'
+import type { OAuthClientConfig } from '../src/common/types.ts'
+
+/**
+ * Resolve one child's oauth block from a config file and run the flow.
+ *
+ * Errors carry the config path and child id because a login failure with no
+ * context is the expensive kind: it costs a consent and tells you nothing.
+ */
+async function runLogin(configPath: string, mcpId: string): Promise<void> {
+  const { mcps } = loadAggregatorConfig(configPath)
+  const entry = mcps.find((m) => m.id === mcpId)
+  if (!entry) {
+    throw new Error(
+      `No MCP with id '${mcpId}' in '${configPath}'. Available: ${mcps.map((m) => m.id).join(', ')}`
+    )
+  }
+  const connection = entry.connection as { type?: string; url?: string; oauth?: OAuthClientConfig }
+  if (connection.type !== 'http' || !connection.url) {
+    throw new Error(`MCP '${mcpId}' is not an http connection; OAuth login does not apply to it.`)
+  }
+  if (!connection.oauth) {
+    throw new Error(
+      `MCP '${mcpId}' has no 'oauth' block on its connection. Add one (tokenFile, redirectUrl, scopes, allowedScopes) before running login.`
+    )
+  }
+
+  const result = await login({ serverUrl: connection.url, config: connection.oauth })
+  console.info(`Authorized. Tokens written to ${result.tokenFile}`)
+  console.info(`Granted scope: ${result.grantedScope.join(' ') || '(none reported)'}`)
+}
 
 async function main() {
   try {
@@ -39,17 +70,20 @@ async function main() {
 
     if (values.help || positionals.length === 0) {
       console.info(`
-Usage: mcp-aggregator [options] <config-file>
+Usage: mcp-aggregator [options] <config-file>\n       mcp-aggregator login <config-file> <mcp-id>\n\nLaunches an MCP Aggregator server according to the configuration passed in.\n\nCommands:\n  login <config-file> <mcp-id>\n                 Run the OAuth authorization flow for one http child and\n                 store its tokens. The redirect target is loopback, so run\n                 this where the browser is. The server never waits for a\n                 human: children without tokens are simply unavailable.\n\nOptions:\n  -h, --help     Show this help message\n  -v, --version  Show version information\n\nArguments:\n  config-file    Path to the configuration file (required)\n`)
+      process.exit(0)
+    }
 
-Launches an MCP Aggregator server according to the configuration passed in.
-
-Options:
-  -h, --help     Show this help message
-  -v, --version  Show version information
-
-Arguments:
-  config-file    Path to the configuration file (required)
-`)
+    // `login` is a subcommand, not a config file. Dispatch it before any
+    // server setup so a login run can never accidentally boot a server.
+    if (positionals[0] === 'login') {
+      const configPath = positionals[1]
+      const mcpId = positionals[2]
+      if (!configPath || !mcpId) {
+        console.error('Error: usage is: mcp-aggregator login <config-file> <mcp-id>')
+        process.exit(1)
+      }
+      await runLogin(configPath, mcpId)
       process.exit(0)
     }
 

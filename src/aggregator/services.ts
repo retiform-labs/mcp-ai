@@ -107,8 +107,12 @@ interface ToolRoute {
  * Used for dependency injection in tests to mock client creation.
  */
 interface AggregatorDeps {
-  /** Custom client factory. Defaults to the internal createClient which uses createTransport. */
-  createClientFn?: (connection: Connection) => Promise<Client>
+  /**
+   * Custom client factory. Defaults to the internal createClient which uses
+   * createTransport. The mcp id is passed as a second argument so a factory
+   * can label its diagnostics; existing one-argument factories remain valid.
+   */
+  createClientFn?: (connection: Connection, mcpId?: string) => Promise<Client>
 }
 
 const create = (config: McpAggregatorConfig, deps?: AggregatorDeps) => {
@@ -117,8 +121,20 @@ const create = (config: McpAggregatorConfig, deps?: AggregatorDeps) => {
   // eslint-disable-next-line functional/no-let
   let toolRouting: Record<string, ToolRoute> = {}
 
-  const createClient = async (connection: Connection) => {
-    const transport = createTransport(connection)
+  const createClient = async (connection: Connection, mcpId?: string) => {
+    // When a child needs interactive authorization, the SDK returns REDIRECT
+    // and the transport throws an UnauthorizedError carrying no message. That
+    // would leave the journal saying only 'failed to connect:'. Naming the
+    // child and the URL here is what makes the failure actionable.
+    const transport = createTransport(connection, {
+      onAuthorizationUrl: (url) => {
+        console.error(
+          `MCP "${mcpId ?? 'unknown'}" requires authorization. This child stays unavailable until you run:\n` +
+            `  mcp-aggregator login <config> ${mcpId ?? '<id>'}\n` +
+            `Authorization URL (loopback redirect -- open it in a browser on THIS host):\n  ${url.toString()}`
+        )
+      },
+    })
     const client = new Client(McpClientConfigs.integrator)
     await client.connect(transport)
     return client
@@ -141,7 +157,7 @@ const create = (config: McpAggregatorConfig, deps?: AggregatorDeps) => {
       // Use allSettled so one failed MCP doesn't crash the entire aggregator
       const results = await Promise.allSettled(
         activeMcps.map(async mcp => {
-          const client = await _createClient(mcp.connection)
+          const client = await _createClient(mcp.connection, mcp.id)
           return [mcp.id, client] as const
         })
       )

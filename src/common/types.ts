@@ -72,6 +72,13 @@ export type HttpConnection = Readonly<{
   type: 'http'
   url: string
   headers?: Readonly<Record<string, string>>
+  /**
+   * OAuth 2.1 client credentials for this connection. When present, the
+   * transport obtains a token (interactively, via `login`, or silently via a
+   * saved refresh token) and presents it as a Bearer credential. Absent, the
+   * connection behaves exactly as before.
+   */
+  oauth?: OAuthClientConfig
   timeout?: number
   retry?: Readonly<{
     attempts: number
@@ -333,6 +340,63 @@ export type OpenAPISchema = Readonly<{
  * variable is unset/empty at startup, the server MUST refuse to boot —
  * fail-closed (see src/common/middleware/bearer-auth.ts).
  */
+/**
+ * OAuth 2.1 client configuration for an `http` connection.
+ *
+ * This is CLIENT-side: it is how we obtain and present a token to somebody
+ * else's resource server. It is deliberately NOT named `auth` -- that key
+ * already means something on `HttpServerConfig.connection` (the bearer token
+ * WE require from inbound callers). Conflating the two would make a config
+ * read as if it both demanded and submitted credentials.
+ *
+ * The flow itself (discovery, dynamic client registration, PKCE, code
+ * exchange, refresh) is implemented by the MCP SDK's `OAuthClientProvider`
+ * contract; this type only carries the decisions we are responsible for.
+ *
+ * `scopes` and `allowedScopes` are separate on purpose. `scopes` is what we
+ * ASK for; `allowedScopes` is the most we will ever PERSIST. They usually
+ * match, but the resource server controls the resolved request scope
+ * (a server-advertised scope list outranks our client metadata), so the
+ * allowlist is the only enforcement point that cannot be overridden from
+ * the far side.
+ */
+export type OAuthClientConfig = Readonly<{
+  /**
+   * Absolute path to the JSON file holding tokens, client information, the
+   * PKCE verifier and any discovery state. Written atomically and kept at
+   * mode 600; a file readable by group or other is refused on read, because
+   * it may hold a token that can move money.
+   */
+  tokenFile: string
+  /**
+   * Loopback redirect URI. Most providers (RFC 8252) accept only
+   * `http://127.0.0.1:<port>/<path>`; a public or non-loopback URL is
+   * rejected at the authorization endpoint.
+   */
+  redirectUrl: string
+  /**
+   * Scopes to REQUEST. Sent as the authorization request's `scope` and as the
+   * client metadata `scope`.
+   */
+  scopes: readonly string[]
+  /**
+   * Scopes we are willing to STORE. A granted scope outside this list causes
+   * `saveTokens()` to throw and persist nothing, so an over-broad grant can
+   * never reach a request.
+   */
+  allowedScopes: readonly string[]
+  /** Human-readable client name sent with dynamic client registration. */
+  clientName?: string
+  /**
+   * User-Agent used for the OAuth HTTP calls. Some providers front their
+   * metadata endpoints with a WAF that rejects obviously non-browser or
+   * library-default agents; setting this avoids an opaque 403.
+   */
+  userAgent?: string
+  /** Optional URL to fetch client metadata from, instead of inline metadata. */
+  clientMetadataUrl?: string
+}>
+
 export type BearerAuthConfig = Readonly<{
   type: 'bearer'
   /** Environment variable holding the API key. Default: MCP_API_KEY. */

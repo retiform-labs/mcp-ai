@@ -8,11 +8,42 @@ import { WebSocketClientTransport } from '@modelcontextprotocol/sdk/client/webso
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 
 import { Connection } from './types.js'
+import { createOAuthProvider, createUserAgentFetch } from './oauth/provider.js'
+
+/**
+ * Optional collaborators for `toMcpConfig`, injected so the function stays a
+ * pure mapping from config to transport options and can be tested without
+ * touching the network or the filesystem.
+ */
+export type TransportOptionsOverrides = Readonly<{
+  /**
+   * Where an authorization URL should be surfaced. The aggregator passes a
+   * journal logger; the `login` command passes its own printer.
+   */
+  onAuthorizationUrl?: (url: URL) => void | Promise<void>
+}>
 
 export const toMcpConfig = (
-  connection: Connection
+  connection: Connection,
+  overrides: TransportOptionsOverrides = {}
 ): StreamableHTTPClientTransportOptions => {
   if (connection.type === 'http') {
+    // OAuth is built here rather than inside createTransport so that the
+    // options object stays a single, inspectable value -- and so an http
+    // connection WITHOUT oauth produces exactly the same object it always
+    // did, down to the absence of the authProvider key.
+    const authProvider = connection.oauth
+      ? createOAuthProvider({
+          config: connection.oauth,
+          onAuthorizationUrl: overrides.onAuthorizationUrl,
+        })
+      : undefined
+
+    const fetchImpl =
+      connection.oauth?.userAgent !== undefined
+        ? createUserAgentFetch(connection.oauth.userAgent)
+        : undefined
+
     return {
       requestInit: {
         headers: connection.headers,
@@ -28,14 +59,25 @@ export const toMcpConfig = (
             maxRetries: connection.retry.attempts,
           }
         : undefined,
+      authProvider,
+      fetch: fetchImpl,
     }
   }
   throw new Error(`Unsupported connection type: ${connection.type}`)
 }
 
-export const createTransport = (connection: Connection) => {
+export const createTransport = (
+  connection: Connection,
+  overrides: TransportOptionsOverrides = {}
+) => {
   if (connection.type === 'http') {
-    return new StreamableHTTPClientTransport(new URL(connection.url))
+    // The options object was previously discarded, so `connection.headers` was
+    // silently dropped and no auth provider could ever be supplied. Both are
+    // now honored through the same mapping used everywhere else.
+    return new StreamableHTTPClientTransport(
+      new URL(connection.url),
+      toMcpConfig(connection, overrides)
+    )
   }
   if (connection.type === 'ws') {
     return new WebSocketClientTransport(new URL(connection.url))
