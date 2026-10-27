@@ -75,7 +75,7 @@ export const portFromRedirectUrl = (redirectUrl: string): number => {
  * exit non-zero. A listener that resolves on a missing code would turn a
  * provider error into a silent no-op.
  */
-const awaitCallback = (
+export const awaitCallback = (
   redirectUrl: string,
   expectedState: string | undefined,
   timeoutMs: number,
@@ -86,11 +86,23 @@ const awaitCallback = (
     const expectedPath = new URL(redirectUrl).pathname
     let settled = false
 
+    // Release the port, then settle -- never the other way round, and never
+    // INSIDE server.close()'s callback.
+    //
+    // Two traps here, both measured. Settling before close() lets a caller
+    // rebind while the socket is still held, which surfaces as a spurious
+    // EADDRINUSE on the next attempt. But waiting for close()'s callback
+    // deadlocks instead: an HTTP client using keep-alive leaves its socket
+    // open, close() waits for every socket, and the callback never fires. So
+    // close, force the lingering connections down, and settle immediately.
     const finish = (err: Error | null, code?: string): void => {
       if (settled) {return}
       settled = true
       clearTimeout(timer)
       server.close()
+      // Present since Node 18.2; the optional call keeps this safe on any
+      // runtime that predates it rather than failing to compile a listener.
+      server.closeAllConnections?.()
       if (err) {reject(err)} else {resolve(code as string)}
     }
 
