@@ -26,7 +26,15 @@ import { createOAuthProvider, parseScope, readState } from './provider.js'
 import type { OAuthClientConfig } from '../types.js'
 
 /** Default window for a human to finish a consent screen. */
-export const DEFAULT_LOGIN_TIMEOUT_MS = 10 * 60 * 1000
+/**
+ * Default window for a human to finish a consent screen.
+ *
+ * 30 minutes, raised from 10 after the first real use expired before the
+ * operator could act: reading a message, switching to a browser, and consenting
+ * through a bank UI is not a 10-minute round trip, and an expired listener
+ * leaves a dead URL that looks like a broken port.
+ */
+export const DEFAULT_LOGIN_TIMEOUT_MS = 30 * 60 * 1000
 
 export type LoginResult = Readonly<{
   tokenFile: string
@@ -108,13 +116,22 @@ export const awaitCallback = (
 
     const server = createServer((req: IncomingMessage, res: ServerResponse) => {
       const url = new URL(req.url ?? '/', `http://127.0.0.1:${port}`)
+      // Log every request, not just the callback. A probe landing here proves
+      // the browser reaches THIS host; silence proves it does not. Those two
+      // conditions are otherwise identical from the outside, and telling them
+      // apart is the whole diagnosis when a consent appears to do nothing.
+      log(`[login] ${req.method ?? 'GET'} ${url.pathname}${url.search ? '?<query>' : ''} ua=${req.headers['user-agent'] ?? '-'}`)
 
       // Only the configured path is a callback. Anything else gets a short
       // answer instead of being passed through as if it might be the code --
       // favicon requests and stray probes both land here.
       if (url.pathname !== expectedPath) {
         res.writeHead(404, { 'content-type': 'text/plain' })
-        res.end('Not the OAuth callback path.\n')
+        res.end(
+          'Reached the OAuth login listener. This is not the callback path, so ' +
+            'nothing was consumed -- that is expected. The listener is reachable ' +
+            'from this browser.\n'
+        )
         return
       }
 

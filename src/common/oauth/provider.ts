@@ -295,6 +295,17 @@ export const createOAuthProvider = (
         }
         const disallowed = findDisallowedScopes(granted, config.allowedScopes)
         if (disallowed.length > 0) {
+          // Name the FULL granted set, not only the offenders. When a provider
+          // returns more than was requested, the useful question is "did it
+          // return everything it advertises, or only the extras?" -- and the
+          // offender list alone cannot answer that. Scopes are not secret; the
+          // token is, and it is never logged.
+          console.error(
+            `[oauth] granted scope set (${granted.length}): ${granted.join(' ')}`
+          )
+          console.error(
+            `[oauth] requested scope set (${config.scopes.length}): ${config.scopes.join(' ')}`
+          )
           throw new OAuthCredentialError(
             `Refusing to persist OAuth tokens for '${config.tokenFile}': the grant includes scope(s) outside the allowlist: ` +
               `${disallowed.join(', ')}. Nothing was written. Either remove them from the authorization request or add them ` +
