@@ -1,6 +1,6 @@
 {
   "name": "@retiform/mcp-ai",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "description": "Aggregate and integrate MCP servers: one roster, one endpoint. Tool namespace prefixing, per-tool allow and deny lists, bearer auth, and OAuth 2.1 for http children.",
   "keywords": [
     "AI",

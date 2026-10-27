@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.9.1] - 2026-10-27
+
+### Fixed: the frontend note, which was truncated and also wrong
+
+The "A Note For Frontend Use" section ended mid-clause, at "because the
+aggregation code is completely". It arrived that way from upstream and was never
+whole in this repo. Completing it surfaced the larger problem: the implied
+advice was that a tree shaker alone is sufficient, and it is not.
+
+Measured with esbuild targeting the browser, against this package entry: the
+aggregator pulls the stdio, websocket and SSE transports, and those statically
+require child_process and the node builtins. A browser bundler cannot resolve
+them, and because the imports are static rather than lazy, no tree shaker can
+drop them. That is also true of a bundle that only needs the formatting helpers.
+
+Exporting the node builtins with `--external:node:*` does not fix it either:
+transitive dependencies require `fs` and `path` as bare specifiers.
+
+What does work, tested: alias the node builtins to a stub module. That produces
+a bundle for an integrator-only entry point. The note now states this accurately
+and names the alternative of keeping the library out of the client bundle.
+
+Docs only. No behaviour change.
+
 ## [1.9.0] - 2026-10-27
 
 ### Added: per-tool allow and deny lists
