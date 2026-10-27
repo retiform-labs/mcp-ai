@@ -85,11 +85,13 @@ export class OAuthCredentialError extends Error {
  * an allowlist check for no reason.
  */
 export const parseScope = (scope: string | undefined): string[] => {
-  if (!scope) {return []}
+  if (!scope) {
+    return []
+  }
   return scope
     .split(' ')
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0)
+    .map(s => s.trim())
+    .filter(s => s.length > 0)
 }
 
 /**
@@ -103,7 +105,9 @@ export const findDisallowedScopes = (
   const allow = new Set(allowed)
   const bad: string[] = []
   for (const s of granted) {
-    if (!allow.has(s) && !bad.includes(s)) {bad.push(s)}
+    if (!allow.has(s) && !bad.includes(s)) {
+      bad.push(s)
+    }
   }
   return bad
 }
@@ -121,7 +125,9 @@ export const readState = async (tokenFile: string): Promise<StoredState> => {
   try {
     stat = await fs.stat(tokenFile)
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {return {}}
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return {}
+    }
     throw err
   }
 
@@ -134,7 +140,9 @@ export const readState = async (tokenFile: string): Promise<StoredState> => {
   }
 
   const raw = await fs.readFile(tokenFile, 'utf8')
-  if (raw.trim() === '') {return {}}
+  if (raw.trim() === '') {
+    return {}
+  }
   try {
     return JSON.parse(raw) as StoredState
   } catch {
@@ -161,7 +169,10 @@ export const writeState = async (
   await fs.mkdir(dir, { recursive: true })
 
   // Random suffix so two concurrent writers cannot collide on the temp name.
-  const tmp = path.join(dir, `.${path.basename(tokenFile)}.${randomBytes(6).toString('hex')}.tmp`)
+  const tmp = path.join(
+    dir,
+    `.${path.basename(tokenFile)}.${randomBytes(6).toString('hex')}.tmp`
+  )
   const body = JSON.stringify(state, null, 2)
 
   // 0o600 in the open() call means the file is never briefly world-readable
@@ -234,7 +245,9 @@ export const createOAuthProvider = (
   const { config } = options
   const sink = options.onAuthorizationUrl ?? defaultRedirectSink
 
-  const commit = async (mutate: (state: StoredState) => StoredState): Promise<void> => {
+  const commit = async (
+    mutate: (state: StoredState) => StoredState
+  ): Promise<void> => {
     // Read-modify-write on every mutation. The file is small and infrequently
     // touched, so the extra read costs nothing and keeps each slot independent:
     // saving tokens can never clobber a code verifier saved moments earlier.
@@ -263,13 +276,17 @@ export const createOAuthProvider = (
 
     clientMetadataUrl: config.clientMetadataUrl,
 
-    async clientInformation(): Promise<OAuthClientInformationMixed | undefined> {
+    async clientInformation(): Promise<
+      OAuthClientInformationMixed | undefined
+    > {
       const state = await readState(config.tokenFile)
       return state.clientInformation
     },
 
-    saveClientInformation(clientInformation: OAuthClientInformationMixed): Promise<void> {
-      return commit((state) => ({ ...state, clientInformation }))
+    saveClientInformation(
+      clientInformation: OAuthClientInformationMixed
+    ): Promise<void> {
+      return commit(state => ({ ...state, clientInformation }))
     },
 
     async tokens(): Promise<OAuthTokens | undefined> {
@@ -283,9 +300,7 @@ export const createOAuthProvider = (
       // A refresh response may omit `scope`; when it does we validate against
       // the scope we already accepted, so a silent refresh cannot widen the
       // grant either.
-      const effective = tokens.scope
-        ? parseScope(tokens.scope)
-        : undefined
+      const effective = tokens.scope ? parseScope(tokens.scope) : undefined
 
       const check = async (): Promise<void> => {
         let granted = effective
@@ -314,7 +329,7 @@ export const createOAuthProvider = (
         }
       }
 
-      return check().then(() => commit((state) => ({ ...state, tokens })))
+      return check().then(() => commit(state => ({ ...state, tokens })))
     },
 
     redirectToAuthorization(authorizationUrl: URL): void | Promise<void> {
@@ -322,7 +337,7 @@ export const createOAuthProvider = (
     },
 
     saveCodeVerifier(codeVerifier: string): Promise<void> {
-      return commit((state) => ({ ...state, codeVerifier }))
+      return commit(state => ({ ...state, codeVerifier }))
     },
 
     async codeVerifier(): Promise<string> {
@@ -337,14 +352,14 @@ export const createOAuthProvider = (
     },
 
     saveDiscoveryState(state: OAuthDiscoveryState): Promise<void> {
-      return commit((s) => ({ ...s, discoveryState: state }))
+      return commit(s => ({ ...s, discoveryState: state }))
     },
 
     async state(): Promise<string> {
       // A fresh value per authorization attempt, persisted before the browser
       // leaves so the return trip can be compared against it.
       const value = randomBytes(16).toString('hex')
-      await commit((s) => ({ ...s, oauthState: value }))
+      await commit(s => ({ ...s, oauthState: value }))
       return value
     },
   }
@@ -353,7 +368,9 @@ export const createOAuthProvider = (
   // contract, so they are attached here rather than inline. Required members
   // live in the literal above -- a required member assigned afterwards would
   // be a lie about the interface.
-  provider.discoveryState = async (): Promise<OAuthDiscoveryState | undefined> => {
+  provider.discoveryState = async (): Promise<
+    OAuthDiscoveryState | undefined
+  > => {
     const state = await readState(config.tokenFile)
     return state.discoveryState
   }
@@ -364,7 +381,7 @@ export const createOAuthProvider = (
     // Called by the SDK when the server says a credential is no longer valid.
     // Narrow on purpose: 'tokens' must not also discard client registration,
     // or the next attempt re-registers for no reason and loses discovery.
-    await commit((state) => {
+    await commit(state => {
       switch (scope) {
         case 'all':
           return {}

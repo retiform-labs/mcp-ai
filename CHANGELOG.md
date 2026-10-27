@@ -151,6 +151,7 @@ reading it.
 - **`## Testing` claimed provider environment variables were needed.** The
   suite is offline; it now says so, states the real test count, and describes
   coverage by concern.
+
 ## [1.7.1] — 2026-10-25
 
 ### Changed: standard semver, and professional package identity
@@ -215,7 +216,6 @@ API key as `Authorization: Bearer <key>` or `x-api-key: <key>`.
 401/200/session establishment/backward compat). Suite: 80 passing
 (36 baseline + 44 new).
 
-
 ## [1.6.7-guan.0] — 2026-09-13
 
 ### Fixed: `connection.host` now reaches the socket (all express entries)
@@ -253,3 +253,77 @@ configured port. Suite: 36/36.
 - Consumers using loopback-only binds may now drop deployment-level
   workarounds (e.g. systemd `IPAddressDeny`), though keeping them as
   defense-in-depth is reasonable.
+
+> **Note on 1.6.1 through 1.6.6:** these entries were written from the git
+> history during the 1.9.0 documentation pass. They record what shipped and
+> when the commits landed; they are not contemporaneous release notes.
+
+## [1.6.6-guan.0] — 2026-08-21
+
+### Added: `disabled` flag and runtime resilience
+
+An `mcps[]` entry can be switched off with `disabled: true` without removing
+its configuration — no client spawned, no tools collected, no errors raised.
+
+Tool discovery and execution were also made fault-tolerant so one broken server
+cannot take down the gateway: a failed connection is isolated by
+`Promise.allSettled`, a failed `listTools()` contributes zero tools from that
+server only, and a failed `callTool()` returns a structured MCP error response
+instead of throwing.
+
+## [1.6.5-guan.0] — 2026-08-21
+
+### Fixed: the published package was not the package
+
+`files` was absent (so the whole working tree shipped), the `exports` map was
+missing, and `main` pointed at a path that did not exist in the tarball.
+Installing from the registry produced a package that could not be resolved.
+
+## [1.6.2-guan.0] — 2026-05-21
+
+_Version recorded in `package.json` at commit `48e9c3f`; no git tag carries it._
+
+### Added: `toolTimeoutMs`
+
+Aggregator tool calls passed no timeout to the SDK, so the default 60 seconds
+applied and any slower backend was cut off with no way to configure it.
+`aggregator.toolTimeoutMs` is now honored, and the default was raised to
+180000 ms (three minutes).
+
+## [1.6.1-guan.0] — 2026-04-30
+
+### Added: tool namespace prefixing (`autoPrefix`)
+
+Two servers exposing the same tool name previously collided: the second
+silently overwrote the first, and one tool simply vanished from the aggregated
+roster. `autoPrefix`, per-entry `prefix`, and an aggregator-level `prefix`
+compose a unique name, with numeric suffixing as a last resort.
+
+## Before 1.6.1 — upstream fixes carried by this library
+
+Five correctness fixes landed before the first tagged release of this
+line, addressing defects present in `@l4t/mcp-ai` at the point of divergence.
+They were never recorded in a release changelog, so they are set down here
+from the git history (commits are dated):
+
+- **Double-wrapped arguments in `callTool`** (2026-04-19) — invalid `id` and
+  `input` properties were sent, and arguments were not unwrapped, corrupting
+  array parameters and producing `-32602`.
+- **SDK 1.29.0 compatibility** (2026-04-19) — `capabilities.tools` was passed
+  to `McpServer` in a form the newer SDK rejects.
+- **Stringified JSON arrays in Zod validation** (2026-04-19) — some clients
+  stringify arrays and objects inside `params`; they are now parsed
+  recursively before validation.
+- **`async` on `_routeWrapper`** (2026-04-21) — Express does not await a
+  returned promise from a route handler, so an async wrapper produced
+  unhandled rejections instead of error responses.
+- **Cross-package Zod schema detection** (2026-04-21) — `instanceof ZodSchema`
+  fails across package boundaries (dual-package hazard). Raw shapes are now
+  detected by duck-typing and passed to the SDK, which handles wrapping.
+
+The fixes and `autoPrefix` were offered back upstream as
+[PR #5](https://github.com/Leadership-4-Tech/mcp-ai/pull/5).
+
+## 1.6.0 and earlier
+
+Upstream `@l4t/mcp-ai` history. See the git log.

@@ -50,7 +50,9 @@ export const buildAuthMiddlewareFromConnection = (
   env: Readonly<Record<string, string | undefined>> = process.env
 ): ExpressMiddleware[] => {
   const auth = connection?.auth
-  if (!auth) {return []}
+  if (!auth) {
+    return []
+  }
 
   if (auth.type !== SUPPORTED_AUTH_TYPE) {
     throw new Error(
@@ -99,6 +101,8 @@ export const buildExpressOptionsFromConfig = (
     config.server.connection,
     env
   )
-  if (middlewares.length === 0) {return undefined}
+  if (middlewares.length === 0) {
+    return undefined
+  }
   return { preRouteMiddleware: middlewares }
 }

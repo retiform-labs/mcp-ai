@@ -1,14 +1,6 @@
 # The MCP Aggregation and Integration Library
 
-> **Fork `@retiform/mcp-ai`** — Upstream: `@l4t/mcp-ai` by [Mike Cornwell](https://github.com/Leadership-4-Tech/mcp-ai).
->
-> This fork includes **6 upstream bug fixes** (Zod cross-package detection, async handler
-> compatibility, Kai JSON array handling, SDK v1.29.0+ compatibility, double-wrapped args fix)
-> and a new **`autoPrefix` tool namespace prefixing** feature for aggregating servers with
-> overlapping tool names.
-
-![Unit Tests](https://github.com/leadership-4-tech/mcp-ai/actions/workflows/ut.yml/badge.svg?branch=main)
-[![Coverage Status](https://coveralls.io/repos/github/Leadership-4-Tech/mcp-ai/badge.svg?branch=try-again)](https://coveralls.io/github/Leadership-4-Tech/mcp-ai?branch=try-again)
+![Unit Tests](https://github.com/retiform-labs/mcp-ai/actions/workflows/ut.yml/badge.svg?branch=main)
 
 MCP servers are a pretty sweet idea, but having the ability to integrate them all together into a system, or package them up and make them available, should be easier. This is where this library comes in.
 
@@ -273,12 +265,12 @@ The SimpleServer makes it easy to:
 - Focus on your tool logic while the server handles MCP protocol details
 - Maintain consistent behavior across different transport mechanisms
 
-## Tool Namespace Prefixing (New in Fork)
+## Tool Namespace Prefixing
 
 When aggregating multiple MCP servers, you will often encounter **tool name
 collisions**: two different servers expose a tool with the same name (e.g., both
 have a `list_files` or `search` tool). Without prefixing, only one tool
-would be visible — the second silently overwrites the first. This fork adds
+would be visible — the second silently overwrites the first. This library adds
 **automatic and configurable namespace prefixing** to solve that problem
 gracefully.
 
@@ -398,7 +390,7 @@ const tools = await server.getTools()
 
 Available since `1.6.1`.
 
-## Disabling MCP Servers (New in Fork)
+## Disabling MCP Servers
 
 Sometimes you need to temporarily disable an MCP server without removing its
 configuration — for debugging, maintenance, or when a server is known to be
@@ -438,7 +430,7 @@ The server is logged as skipped via `console.info`.
 
 Available since `1.6.6`.
 
-## Per-Tool Filtering (New in v1.9)
+## Per-Tool Filtering
 
 An MCP server can expose a hundred tools when you want three. `allowTools` and
 `denyTools` narrow what one server contributes to the aggregated roster:
@@ -463,7 +455,11 @@ An MCP server can expose a hundred tools when you want three. `allowTools` and
     {
       "id": "browser",
       "denyTools": ["evaluate_js", "upload_file"],
-      "connection": { "type": "cli", "path": "npx", "args": ["-y", "browser-mcp"] }
+      "connection": {
+        "type": "cli",
+        "path": "npx",
+        "args": ["-y", "browser-mcp"]
+      }
     }
   ]
 }
@@ -471,13 +467,13 @@ An MCP server can expose a hundred tools when you want three. `allowTools` and
 
 ### Semantics
 
-| Configuration | Result |
-|---|---|
-| neither field | every tool from that server, exactly as before |
-| `allowTools: ["a"]` | only `a` |
-| `denyTools: ["a"]` | everything except `a` |
-| both, naming the same tool | **denied** — deny wins |
-| `allowTools: []` | **nothing** — an empty list is a lock-out, not an absence |
+| Configuration              | Result                                                    |
+| -------------------------- | --------------------------------------------------------- |
+| neither field              | every tool from that server, exactly as before            |
+| `allowTools: ["a"]`        | only `a`                                                  |
+| `denyTools: ["a"]`         | everything except `a`                                     |
+| both, naming the same tool | **denied** — deny wins                                    |
+| `allowTools: []`           | **nothing** — an empty list is a lock-out, not an absence |
 
 An absent field means "no filtering on this axis". An empty array means "nothing
 allowed", which is why `allowTools: []` disables a server's tools without
@@ -509,7 +505,7 @@ offers one; use this when it does not, or as a second layer.
 
 Available since `1.9.0`.
 
-## Runtime Resilience (New in Fork)
+## Runtime Resilience
 
 The aggregator is designed to survive individual MCP server failures without
 crashing the entire process:
@@ -595,7 +591,7 @@ to install. `--help` (`-h`) and `--version` (`-v`) are supported.
 
 This is very useful for running this as a server process, in something like a docker container.
 
-## Server Authentication (New in v1.7)
+## Server Authentication
 
 Aggregator HTTP and SSE servers can require an API key on every request.
 
@@ -654,15 +650,17 @@ mcp-aggregator ./config.json
 Any MCP client that can set custom headers works out of the box — add a
 header `Authorization: Bearer <your-key>` to the client's server entry.
 
-## OAuth for HTTP Children (New in v1.8)
+Available since `1.7.0`.
+
+## OAuth for HTTP Children
 
 An `http` child can present OAuth 2.1 credentials. Discovery, dynamic client
 registration, PKCE (S256), code exchange, and refresh-on-401 are handled by the
 MCP SDK; this library supplies the persistent state it delegates to, and adds
 one guarantee the protocol itself does not give you.
 
-**`auth` and `oauth` are different things.** `auth` on a *server* connection is
-the credential **we demand** from inbound callers. `oauth` on an *http client*
+**`auth` and `oauth` are different things.** `auth` on a _server_ connection is
+the credential **we demand** from inbound callers. `oauth` on an _http client_
 connection is the credential **we obtain** from somebody else's resource
 server. They are deliberately not the same key.
 
@@ -692,14 +690,14 @@ server. They are deliberately not the same key.
 }
 ```
 
-| Field | Meaning |
-| --- | --- |
-| `tokenFile` | Where tokens, client registration, the PKCE verifier and discovery state are kept. Written atomically at mode `600`. |
-| `redirectUrl` | Loopback redirect URI. Must be `http://127.0.0.1:<port>/<path>` or `http://localhost:<port>/<path>`, with an explicit port. |
-| `scopes` | What we **ask for** — sent as the authorization request's `scope` and as the client metadata `scope`. |
-| `allowedScopes` | The most we will ever **store**. See the guarantee below. |
-| `clientName` | Sent with dynamic client registration. |
-| `userAgent` | User-Agent for the OAuth HTTP calls. Set this if the provider's endpoints sit behind a WAF that rejects default library agents with a bare `403`. |
+| Field           | Meaning                                                                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tokenFile`     | Where tokens, client registration, the PKCE verifier and discovery state are kept. Written atomically at mode `600`.                              |
+| `redirectUrl`   | Loopback redirect URI. Must be `http://127.0.0.1:<port>/<path>` or `http://localhost:<port>/<path>`, with an explicit port.                       |
+| `scopes`        | What we **ask for** — sent as the authorization request's `scope` and as the client metadata `scope`.                                             |
+| `allowedScopes` | The most we will ever **store**. See the guarantee below.                                                                                         |
+| `clientName`    | Sent with dynamic client registration.                                                                                                            |
+| `userAgent`     | User-Agent for the OAuth HTTP calls. Set this if the provider's endpoints sit behind a WAF that rejects default library agents with a bare `403`. |
 
 ### The one-shot login
 
@@ -736,10 +734,10 @@ explicit scope  ??  the resource server's advertised scope list  ??  our client 
 
 A resource server that advertises a broader set than you want therefore
 **outranks your own client metadata**, and it can cause a scope you did not
-intend to be *asked for*. You cannot reliably prevent that from the client
+intend to be _asked for_. You cannot reliably prevent that from the client
 side.
 
-What you *can* control is what gets **kept**. Every token is validated against
+What you _can_ control is what gets **kept**. Every token is validated against
 `allowedScopes` before it is written. If the grant includes a scope outside
 that list, `saveTokens()` throws, names the offending scope, and **persists
 nothing** — so a token carrying an over-broad grant can never reach a later
@@ -776,6 +774,8 @@ indistinguishable from a genuine one.
 
 `connection.headers` is honored on `http` connections. Set static headers
 there; use `oauth` for anything that has to be refreshed.
+
+Available since `1.8.0`.
 
 ## Overview
 
@@ -1105,6 +1105,8 @@ No environment variables are required. If you add tests that call a real provide
 - The `path` field in server configurations is optional and defaults to '/'
 - For SSE servers, the `messagesPath` field is optional and defaults to '/messages'
 - `maxParallelCalls` is optional and defaults to 10 for both integrators and servers
+- `toolTimeoutMs` is optional and defaults to `180000` ms (three minutes) for
+  aggregator tool calls. Raise it for slow backends; lower it to fail fast
 
 ## Contributing
 
@@ -1118,11 +1120,11 @@ No environment variables are required. If you add tests that call a real provide
 
 GPL-3.0-or-later
 
-Original library by [Mike Cornwell](https://github.com/Leadership-4-Tech/mcp-ai)<br/>
-— published as `@l4t/mcp-ai`.
+Built on [`@l4t/mcp-ai`](https://github.com/Leadership-4-Tech/mcp-ai) by
+[Mike Cornwell](https://github.com/Leadership-4-Tech/mcp-ai), whose design this
+library still follows. Maintained by [Guan](https://github.com/retiform-labs) at
+[Retiform Labs](https://retiform.dev), published as
+[`@retiform/mcp-ai`](https://www.npmjs.com/package/@retiform/mcp-ai).
 
-This fork maintained by [Guan](https://github.com/retiform-labs)<br/>
-— published as [`@retiform/mcp-ai`](https://www.npmjs.com/package/@retiform/mcp-ai).
-
-Bug fixes and the `autoPrefix` feature are contributed back upstream via<br/>
-[PR #5](https://github.com/Leadership-4-Tech/mcp-ai/pull/5).
+See the [CHANGELOG](./CHANGELOG.md) for what differs from upstream, and the git
+log for the detail behind it.

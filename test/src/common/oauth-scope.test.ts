@@ -54,14 +54,21 @@ describe('OAuth scope parsing', () => {
   it('reports disallowed scopes, de-duplicated and in order', () => {
     expect(
       findDisallowedScopes(
-        ['user:read', 'crypto:write', 'crypto:write', 'banking-cards-creds:read'],
+        [
+          'user:read',
+          'crypto:write',
+          'crypto:write',
+          'banking-cards-creds:read',
+        ],
         ['user:read']
       )
     ).to.deep.equal(['crypto:write', 'banking-cards-creds:read'])
   })
 
   it('accepts a strict subset of the allowlist', () => {
-    expect(findDisallowedScopes(['user:read'], ['user:read', 'crypto:read'])).to.deep.equal([])
+    expect(
+      findDisallowedScopes(['user:read'], ['user:read', 'crypto:read'])
+    ).to.deep.equal([])
   })
 })
 
@@ -83,7 +90,9 @@ describe('OAuth token persistence', () => {
   })
 
   it('writes atomically at mode 600', async () => {
-    await writeState(tokenFile, { tokens: { access_token: 'a', token_type: 'Bearer' } })
+    await writeState(tokenFile, {
+      tokens: { access_token: 'a', token_type: 'Bearer' },
+    })
     const stat = await fs.stat(tokenFile)
     expect(stat.mode & 0o777).to.equal(0o600)
     const state = await readState(tokenFile)
@@ -97,7 +106,9 @@ describe('OAuth token persistence', () => {
   })
 
   it('REFUSES to read a token file that group or other can access', async () => {
-    await writeState(tokenFile, { tokens: { access_token: 'a', token_type: 'Bearer' } })
+    await writeState(tokenFile, {
+      tokens: { access_token: 'a', token_type: 'Bearer' },
+    })
     await fs.chmod(tokenFile, 0o644)
     let error: unknown
     try {
@@ -110,7 +121,9 @@ describe('OAuth token persistence', () => {
   })
 
   it('accepts a tightened 400 mode (owner read-only is a legitimate posture)', async () => {
-    await writeState(tokenFile, { tokens: { access_token: 'a', token_type: 'Bearer' } })
+    await writeState(tokenFile, {
+      tokens: { access_token: 'a', token_type: 'Bearer' },
+    })
     await fs.chmod(tokenFile, 0o400)
     const state = await readState(tokenFile)
     expect(state.tokens?.access_token).to.equal('a')
@@ -201,7 +214,10 @@ describe('OAuth provider scope enforcement', () => {
   it('validates a refresh response that omits scope against the accepted grant', async () => {
     // A refresh may legally omit `scope`, meaning "unchanged". We must not
     // treat that as "no scopes to check" and wave it through.
-    const config: OAuthClientConfig = { ...baseConfig(tokenFile), allowedScopes: ['user:read'] }
+    const config: OAuthClientConfig = {
+      ...baseConfig(tokenFile),
+      allowedScopes: ['user:read'],
+    }
     const provider = createOAuthProvider({ config })
     // Seed an accepted grant that is within the allowlist.
     await writeState(tokenFile, {
@@ -213,11 +229,18 @@ describe('OAuth provider scope enforcement', () => {
   })
 
   it('rejects a scope-less refresh when the stored grant was already out of policy', async () => {
-    const config: OAuthClientConfig = { ...baseConfig(tokenFile), allowedScopes: ['user:read'] }
+    const config: OAuthClientConfig = {
+      ...baseConfig(tokenFile),
+      allowedScopes: ['user:read'],
+    }
     const provider = createOAuthProvider({ config })
     // Simulate a file written by an older, laxer version.
     await writeState(tokenFile, {
-      tokens: { access_token: 'a', token_type: 'Bearer', scope: 'user:read crypto:write' },
+      tokens: {
+        access_token: 'a',
+        token_type: 'Bearer',
+        scope: 'user:read crypto:write',
+      },
     })
     let error: unknown
     try {
@@ -247,7 +270,11 @@ describe('OAuth provider state slots', () => {
     const provider = createOAuthProvider({ config: baseConfig(tokenFile) })
     await provider.saveCodeVerifier('verifier-1')
     await provider.saveClientInformation({ client_id: 'c1' })
-    await provider.saveTokens({ access_token: 'a', token_type: 'Bearer', scope: 'user:read' })
+    await provider.saveTokens({
+      access_token: 'a',
+      token_type: 'Bearer',
+      scope: 'user:read',
+    })
 
     const state = await readState(tokenFile)
     expect(state.codeVerifier).to.equal('verifier-1')
@@ -280,7 +307,11 @@ describe('OAuth provider state slots', () => {
     const provider = createOAuthProvider({ config: baseConfig(tokenFile) })
     await provider.saveCodeVerifier('verifier-1')
     await provider.saveClientInformation({ client_id: 'c1' })
-    await provider.saveTokens({ access_token: 'a', token_type: 'Bearer', scope: 'user:read' })
+    await provider.saveTokens({
+      access_token: 'a',
+      token_type: 'Bearer',
+      scope: 'user:read',
+    })
 
     await provider.invalidateCredentials!('tokens')
     const afterTokens = await readState(tokenFile)
@@ -293,7 +324,11 @@ describe('OAuth provider state slots', () => {
     const provider = createOAuthProvider({ config: baseConfig(tokenFile) })
     await provider.saveCodeVerifier('verifier-1')
     await provider.saveClientInformation({ client_id: 'c1' })
-    await provider.saveTokens({ access_token: 'a', token_type: 'Bearer', scope: 'user:read' })
+    await provider.saveTokens({
+      access_token: 'a',
+      token_type: 'Bearer',
+      scope: 'user:read',
+    })
     await provider.invalidateCredentials!('all')
     expect(await readState(tokenFile)).to.deep.equal({})
   })
@@ -311,7 +346,9 @@ describe('OAuth provider state slots', () => {
   it('reports the configured redirect and requested scope in client metadata', () => {
     const provider = createOAuthProvider({ config: baseConfig(tokenFile) })
     expect(String(provider.redirectUrl)).to.equal('http://127.0.0.1:8899/cb')
-    expect(provider.clientMetadata.scope).to.equal('user:read banking-accounts:read')
+    expect(provider.clientMetadata.scope).to.equal(
+      'user:read banking-accounts:read'
+    )
     expect(provider.clientMetadata.token_endpoint_auth_method).to.equal('none')
   })
 })

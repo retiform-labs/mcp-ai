@@ -13,24 +13,35 @@ import { expect } from 'chai'
 import { promises as fs } from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { awaitCallback, portFromRedirectUrl } from '../../../src/common/oauth/login'
+import {
+  awaitCallback,
+  portFromRedirectUrl,
+} from '../../../src/common/oauth/login'
 
 describe('login — redirect URL validation', () => {
   it('extracts the port from a loopback redirect URL', () => {
     expect(portFromRedirectUrl('http://127.0.0.1:8899/cb')).to.equal(8899)
-    expect(portFromRedirectUrl('http://localhost:3000/oauth/callback')).to.equal(3000)
+    expect(
+      portFromRedirectUrl('http://localhost:3000/oauth/callback')
+    ).to.equal(3000)
   })
 
   it('refuses a redirect URL with no explicit port', () => {
     // Authorization servers require a known port on a loopback redirect; a
     // default-port URL cannot be pre-registered and would be rejected later
     // with a much less obvious error.
-    expect(() => portFromRedirectUrl('http://127.0.0.1/cb')).to.throw(/explicit port/)
+    expect(() => portFromRedirectUrl('http://127.0.0.1/cb')).to.throw(
+      /explicit port/
+    )
   })
 
   it('refuses a non-loopback redirect URL', () => {
-    expect(() => portFromRedirectUrl('https://mcp.example.com/cb')).to.throw(/loopback/)
-    expect(() => portFromRedirectUrl('http://10.20.30.40:8899/cb')).to.throw(/loopback/)
+    expect(() => portFromRedirectUrl('https://mcp.example.com/cb')).to.throw(
+      /loopback/
+    )
+    expect(() => portFromRedirectUrl('http://10.20.30.40:8899/cb')).to.throw(
+      /loopback/
+    )
   })
 
   it('refuses something that is not a URL at all', () => {
@@ -79,7 +90,9 @@ describe('login — the callback listener over real HTTP', () => {
 
   it('surfaces a provider error instead of waiting out the timeout', async () => {
     const pending = awaitCallback(redirectUrl, 'expected-state', 5000, noop)
-    await fetch(`${redirectUrl}?error=access_denied&error_description=nope&state=expected-state`)
+    await fetch(
+      `${redirectUrl}?error=access_denied&error_description=nope&state=expected-state`
+    )
     let error: unknown
     try {
       await pending

@@ -36,7 +36,10 @@ describe('toMcpConfig — http options mapping', () => {
   })
 
   it('omits authProvider when no oauth block is declared', () => {
-    const options = toMcpConfig({ type: 'http', url: 'https://example.test/mcp' })
+    const options = toMcpConfig({
+      type: 'http',
+      url: 'https://example.test/mcp',
+    })
     expect(options.authProvider).to.equal(undefined)
     expect(options.fetch).to.equal(undefined)
   })
@@ -54,9 +57,9 @@ describe('toMcpConfig — http options mapping', () => {
     })
     expect(options.authProvider).to.not.equal(undefined)
     // The provider must answer the contract the SDK reads synchronously.
-    expect(String((options.authProvider as { redirectUrl: string }).redirectUrl)).to.equal(
-      'http://127.0.0.1:8899/cb'
-    )
+    expect(
+      String((options.authProvider as { redirectUrl: string }).redirectUrl)
+    ).to.equal('http://127.0.0.1:8899/cb')
   })
 
   it('supplies a UA-carrying fetch when userAgent is configured', () => {
@@ -94,7 +97,9 @@ describe('createTransport — the seam is actually used', () => {
       url: 'https://example.test/mcp',
       headers: { Authorization: 'Bearer abc' },
     }) as unknown as TransportInternals
-    expect(transport._requestInit?.headers).to.deep.equal({ Authorization: 'Bearer abc' })
+    expect(transport._requestInit?.headers).to.deep.equal({
+      Authorization: 'Bearer abc',
+    })
   })
 
   it('passes an authProvider to the http transport when oauth is declared', () => {
@@ -134,10 +139,14 @@ describe('createTransport — the seam is actually used', () => {
           allowedScopes: ['user:read'],
         },
       },
-      { onAuthorizationUrl: (url) => seen.push(String(url)) }
+      { onAuthorizationUrl: url => seen.push(String(url)) }
     )
-    const provider = options.authProvider as { redirectToAuthorization: (u: URL) => void }
-    await provider.redirectToAuthorization(new URL('https://auth.test/authorize?x=1'))
+    const provider = options.authProvider as {
+      redirectToAuthorization: (u: URL) => void
+    }
+    await provider.redirectToAuthorization(
+      new URL('https://auth.test/authorize?x=1')
+    )
     expect(seen).to.deep.equal(['https://auth.test/authorize?x=1'])
   })
 })

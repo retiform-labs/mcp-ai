@@ -1,7 +1,7 @@
 {
   "name": "@retiform/mcp-ai",
   "version": "1.9.0",
-  "description": "A set of tools for making integration and aggregation of MCP servers extremely easy. Forked from @l4t/mcp-ai by Mike Cornwell, with compatibility fixes and tool namespace prefixing.",
+  "description": "Aggregate and integrate MCP servers: one roster, one endpoint. Tool namespace prefixing, per-tool allow and deny lists, bearer auth, and OAuth 2.1 for http children.",
   "keywords": [
     "AI",
     "MCP",
@@ -20,6 +20,7 @@
   ],
   "type": "module",
   "main": "dist/index.js",
+  "types": "./dist/index.d.ts",
   "bin": {
     "mcp-aggregator": "./dist/bin/mcp-aggregator.js"
   },
@@ -109,8 +110,17 @@
   ],
   "exports": {
     ".": "./dist/index.js",
+    "./simple-server": "./dist/simple-server/index.js",
     "./simple-server/index.js": "./dist/simple-server/index.js",
     "./aggregator": "./dist/aggregator/index.js",
     "./integrator": "./dist/integrator/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/retiform-labs/mcp-ai.git"
+  },
+  "homepage": "https://github.com/retiform-labs/mcp-ai#readme",
+  "bugs": {
+    "url": "https://github.com/retiform-labs/mcp-ai/issues"
   }
 }

@@ -17,7 +17,11 @@
  * while writing nothing is the single most expensive kind of failure here,
  * because it costs a fresh consent from the account holder.
  */
-import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { readFileSync } from 'node:fs'
 import { auth } from '@modelcontextprotocol/sdk/client/auth.js'
@@ -104,14 +108,20 @@ export const awaitCallback = (
     // open, close() waits for every socket, and the callback never fires. So
     // close, force the lingering connections down, and settle immediately.
     const finish = (err: Error | null, code?: string): void => {
-      if (settled) {return}
+      if (settled) {
+        return
+      }
       settled = true
       clearTimeout(timer)
       server.close()
       // Present since Node 18.2; the optional call keeps this safe on any
       // runtime that predates it rather than failing to compile a listener.
       server.closeAllConnections?.()
-      if (err) {reject(err)} else {resolve(code as string)}
+      if (err) {
+        reject(err)
+      } else {
+        resolve(code as string)
+      }
     }
 
     const server = createServer((req: IncomingMessage, res: ServerResponse) => {
@@ -120,7 +130,9 @@ export const awaitCallback = (
       // the browser reaches THIS host; silence proves it does not. Those two
       // conditions are otherwise identical from the outside, and telling them
       // apart is the whole diagnosis when a consent appears to do nothing.
-      log(`[login] ${req.method ?? 'GET'} ${url.pathname}${url.search ? '?<query>' : ''} ua=${req.headers['user-agent'] ?? '-'}`)
+      log(
+        `[login] ${req.method ?? 'GET'} ${url.pathname}${url.search ? '?<query>' : ''} ua=${req.headers['user-agent'] ?? '-'}`
+      )
 
       // Only the configured path is a callback. Anything else gets a short
       // answer instead of being passed through as if it might be the code --
@@ -140,7 +152,11 @@ export const awaitCallback = (
         const description = url.searchParams.get('error_description') ?? ''
         res.writeHead(400, { 'content-type': 'text/plain' })
         res.end(`Authorization failed: ${error}\n`)
-        finish(new Error(`Authorization failed: ${error}${description ? ` - ${description}` : ''}`))
+        finish(
+          new Error(
+            `Authorization failed: ${error}${description ? ` - ${description}` : ''}`
+          )
+        )
         return
       }
 
@@ -216,7 +232,7 @@ export const login = async (options: LoginOptions): Promise<LoginResult> => {
 
   const provider: OAuthClientProvider = createOAuthProvider({
     config: options.config,
-    onAuthorizationUrl: (url) => {
+    onAuthorizationUrl: url => {
       // Printed with its own marker so it is easy to copy out of a terminal or
       // a systemd journal without dragging surrounding prose along.
       log('[login] Open this URL in a browser on THIS machine:')
@@ -285,10 +301,18 @@ export const login = async (options: LoginOptions): Promise<LoginResult> => {
 export const loadAggregatorConfig = (
   configPath: string
 ): { mcps: Array<{ id: string; connection: Record<string, unknown> }> } => {
-  const raw = JSON.parse(readFileSync(configPath, 'utf-8')) as Record<string, unknown>
+  const raw = JSON.parse(readFileSync(configPath, 'utf-8')) as Record<
+    string,
+    unknown
+  >
   const aggregator = (raw.aggregator ?? raw) as { mcps?: unknown }
   if (!Array.isArray(aggregator.mcps)) {
     throw new Error(`Config '${configPath}' has no aggregator.mcps array`)
   }
-  return { mcps: aggregator.mcps as Array<{ id: string; connection: Record<string, unknown> }> }
+  return {
+    mcps: aggregator.mcps as Array<{
+      id: string
+      connection: Record<string, unknown>
+    }>,
+  }
 }

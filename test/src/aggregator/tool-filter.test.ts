@@ -173,10 +173,12 @@ describe('tool-filter — aggregated roster integration', () => {
       { createClientFn: createMockClientFactory([allowedClient]) }
     )
     await allowed.connect()
-    expect((await allowed.getTools()).map(t => t.name)).to.deep.equal(['m_nuke'])
+    expect((await allowed.getTools()).map(t => t.name)).to.deep.equal([
+      'm_nuke',
+    ])
     await allowed.executeTool('m_nuke', {})
-    expect(allowedClient.callTool.calledOnce, 'control must actually route').to.be
-      .true
+    expect(allowedClient.callTool.calledOnce, 'control must actually route').to
+      .be.true
   })
 
   it('allow list narrows the roster to the named tools', async () => {
@@ -223,9 +225,7 @@ describe('tool-filter — aggregated roster integration', () => {
   it('an empty allow list denies everything from that server', async () => {
     const client = createMockClient([{ name: 'any' }])
     const services = create(
-      createConfig([
-        { id: 'm', connection: CLI_CONNECTION, allowTools: [] },
-      ]),
+      createConfig([{ id: 'm', connection: CLI_CONNECTION, allowTools: [] }]),
       { createClientFn: createMockClientFactory([client]) }
     )
     await services.connect()
@@ -242,8 +242,10 @@ describe('tool-filter — aggregated roster integration', () => {
     )
     await services.connect()
     await services.getTools()
-    const warn = (console.warn as sinon.SinonStub)
-    const hit = warn.getCalls().find(c => /matched no upstream tool/.test(String(c.args[0])))
+    const warn = console.warn as sinon.SinonStub
+    const hit = warn
+      .getCalls()
+      .find(c => /matched no upstream tool/.test(String(c.args[0])))
     expect(hit, 'unmatched filter entries must be warned about').to.exist
     expect(String(hit!.args[0])).to.include('m:typo_name')
   })

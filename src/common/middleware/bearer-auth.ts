@@ -54,15 +54,21 @@ export const extractPresentedKey = (
   // imperative loop (functional style).
   const presented = PRESENTATION_HEADERS.map(header => {
     const raw = req.headers[header]
-    if (typeof raw !== 'string') {return null} // absent or array-typed → not acceptable
+    if (typeof raw !== 'string') {
+      return null
+    } // absent or array-typed → not acceptable
 
     const trimmed = raw.trim()
-    if (trimmed.length === 0) {return null}
+    if (trimmed.length === 0) {
+      return null
+    }
 
     if (header === 'authorization') {
       // RFC 6750: case-insensitive scheme, single space, non-empty token.
       const lower = trimmed.toLowerCase()
-      if (!lower.startsWith(BEARER_PREFIX)) {return null}
+      if (!lower.startsWith(BEARER_PREFIX)) {
+        return null
+      }
       const token = trimmed.slice(BEARER_PREFIX.length).trim()
       return token.length > 0 ? token : null
     }
@@ -138,7 +144,9 @@ export const resolveBearerSecret = (
   env: Readonly<Record<string, string | undefined>> = process.env
 ): string | null => {
   const value = env[envName]
-  if (typeof value !== 'string') {return null}
+  if (typeof value !== 'string') {
+    return null
+  }
   const trimmed = value.trim()
   return trimmed.length > 0 ? trimmed : null
 }

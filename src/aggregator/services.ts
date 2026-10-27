@@ -128,7 +128,7 @@ const create = (config: McpAggregatorConfig, deps?: AggregatorDeps) => {
     // would leave the journal saying only 'failed to connect:'. Naming the
     // child and the URL here is what makes the failure actionable.
     const transport = createTransport(connection, {
-      onAuthorizationUrl: (url) => {
+      onAuthorizationUrl: url => {
         console.error(
           `MCP "${mcpId ?? 'unknown'}" requires authorization. This child stays unavailable until you run:\n` +
             `  mcp-aggregator login <config> ${mcpId ?? '<id>'}\n` +

@@ -16,15 +16,17 @@ import { login, loadAggregatorConfig } from '../src/common/oauth/login.ts'
  */
 async function runLogin(configPath, mcpId) {
   const { mcps } = loadAggregatorConfig(configPath)
-  const entry = mcps.find((m) => m.id === mcpId)
+  const entry = mcps.find(m => m.id === mcpId)
   if (!entry) {
     throw new Error(
-      `No MCP with id '${mcpId}' in '${configPath}'. Available: ${mcps.map((m) => m.id).join(', ')}`
+      `No MCP with id '${mcpId}' in '${configPath}'. Available: ${mcps.map(m => m.id).join(', ')}`
     )
   }
   const connection = entry.connection
   if (connection.type !== 'http' || !connection.url) {
-    throw new Error(`MCP '${mcpId}' is not an http connection; OAuth login does not apply to it.`)
+    throw new Error(
+      `MCP '${mcpId}' is not an http connection; OAuth login does not apply to it.`
+    )
   }
   if (!connection.oauth) {
     throw new Error(
@@ -32,9 +34,14 @@ async function runLogin(configPath, mcpId) {
     )
   }
 
-  const result = await login({ serverUrl: connection.url, config: connection.oauth })
+  const result = await login({
+    serverUrl: connection.url,
+    config: connection.oauth,
+  })
   console.info(`Authorized. Tokens written to ${result.tokenFile}`)
-  console.info(`Granted scope: ${result.grantedScope.join(' ') || '(none reported)'}`)
+  console.info(
+    `Granted scope: ${result.grantedScope.join(' ') || '(none reported)'}`
+  )
 }
 
 async function main() {
@@ -79,7 +86,9 @@ Usage: mcp-aggregator [options] <config-file>\n       mcp-aggregator login <conf
       const configPath = positionals[1]
       const mcpId = positionals[2]
       if (!configPath || !mcpId) {
-        console.error('Error: usage is: mcp-aggregator login <config-file> <mcp-id>')
+        console.error(
+          'Error: usage is: mcp-aggregator login <config-file> <mcp-id>'
+        )
         process.exit(1)
       }
       await runLogin(configPath, mcpId)
@@ -103,7 +112,10 @@ Usage: mcp-aggregator [options] <config-file>\n       mcp-aggregator login <conf
     // with an unresolvable secret exits here, never boots unauthenticated).
     // Passing undefined (no auth declared) preserves pre-auth behavior.
     const expressOptions = buildExpressOptionsFromConfig(config)
-    const server = create(config, expressOptions ? { express: expressOptions } : undefined)
+    const server = create(
+      config,
+      expressOptions ? { express: expressOptions } : undefined
+    )
 
     // Handle process termination
     process.on('SIGINT', async () => {
