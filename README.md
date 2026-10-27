@@ -795,7 +795,9 @@ Currently supports the following LLM Client's Format:
 
 #### A Note For Frontend Use
 
-Make sure you use an appropriate tree shaker to remove any aggregation code, because the aggregation code is completely
+Make sure you use an appropriate tree shaker to remove any aggregation code, because the aggregation code is Node-only: it pulls in the stdio and socket transports, which in turn require child_process and the node builtins. A browser bundler cannot resolve those.
+
+The same is true even of a bundle that only needs the formatting helpers. The transport modules are imported statically rather than lazily, so a tree shaker cannot drop them on its own. Alias the node builtins to a browser shim, or keep this library out of the client bundle entirely.
 
 ### Aggregation
 
