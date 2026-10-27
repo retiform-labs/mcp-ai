@@ -6,7 +6,6 @@ import { create as createFeatures } from '../features.js'
 import { openApiToZodSchema } from '../../common/libs.js'
 
 const create = (config: McpAggregatorCliConfig) => {
-  // eslint-disable-next-line functional/no-let
   let server: McpServer | undefined
 
   const setupServer = async (features: any) => {

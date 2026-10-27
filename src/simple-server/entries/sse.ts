@@ -12,7 +12,6 @@ const NOT_FOUND_STATUS = 404
 const DEFAULT_PORT = 3000
 
 const create = (config: SimpleServerSseConfig, options?: ExpressOptions) => {
-  // eslint-disable-next-line functional/no-let
   let server: McpServer | undefined
   const transports: Record<string, SSEServerTransport> = {}
   const app = express()
@@ -25,16 +24,13 @@ const create = (config: SimpleServerSseConfig, options?: ExpressOptions) => {
     req: express.Request,
     res: express.Response
   ) => {
-    // eslint-disable-next-line functional/no-try-statements
     try {
       const transport = new SSEServerTransport('/messages', res)
       const sessionId = transport.sessionId
-      // eslint-disable-next-line functional/immutable-data
+
       transports[sessionId] = transport
 
-      // eslint-disable-next-line functional/immutable-data
       transport.onclose = () => {
-        // eslint-disable-next-line functional/immutable-data
         delete transports[sessionId]
       }
 
@@ -65,7 +61,6 @@ const create = (config: SimpleServerSseConfig, options?: ExpressOptions) => {
       return
     }
 
-    // eslint-disable-next-line functional/no-try-statements
     try {
       await transport.handlePostMessage(req, res, req.body)
     } catch {

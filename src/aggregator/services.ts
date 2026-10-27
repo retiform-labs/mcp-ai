@@ -19,7 +19,6 @@ const DEFAULT_TOOL_TIMEOUT_MS = 180_000 // 3 minutes, configurable via aggregato
 const parseStringifiedParams = (value: unknown): unknown => {
   // If it's a string, try to parse it as JSON
   if (typeof value === 'string') {
-    // eslint-disable-next-line functional/no-try-statements
     try {
       const parsed = JSON.parse(value)
       // Recursively parse the result (in case of nested stringification)
@@ -37,7 +36,6 @@ const parseStringifiedParams = (value: unknown): unknown => {
   if (value !== null && typeof value === 'object') {
     return Object.entries(value).reduce(
       (acc, [key, val]) => {
-        // eslint-disable-next-line functional/immutable-data
         acc[key] = parseStringifiedParams(val)
         return acc
       },
@@ -89,9 +87,9 @@ const resolveCollision = (
   if (!existingNames.has(desiredName)) {
     return desiredName
   }
-  // eslint-disable-next-line functional/no-let
+
   let suffix = 2
-  // eslint-disable-next-line functional/no-loop-statements
+
   while (existingNames.has(`${desiredName}_${suffix}`)) {
     suffix++
   }
@@ -117,9 +115,8 @@ interface AggregatorDeps {
 }
 
 const create = (config: McpAggregatorConfig, deps?: AggregatorDeps) => {
-  // eslint-disable-next-line functional/no-let
   let clients: Record<string, Client> = {}
-  // eslint-disable-next-line functional/no-let
+
   let toolRouting: Record<string, ToolRoute> = {}
 
   const createClient = async (connection: Connection, mcpId?: string) => {
@@ -168,7 +165,7 @@ const create = (config: McpAggregatorConfig, deps?: AggregatorDeps) => {
         (acc, result, index) => {
           if (result.status === 'fulfilled') {
             const [id, client] = result.value
-            // eslint-disable-next-line functional/immutable-data
+
             acc[id] = client
           } else {
             // Log the failure but don't crash — other MCPs still work
@@ -190,7 +187,7 @@ const create = (config: McpAggregatorConfig, deps?: AggregatorDeps) => {
         Object.entries(clients),
         async ([mcpId, client]) => {
           // Per-client try/catch: one failed listTools() doesn't kill all tool discovery
-          // eslint-disable-next-line functional/no-try-statements
+
           try {
             const rawTools = await client.listTools().then(x => x.tools)
             // Find the MCP config entry for this client to resolve prefix
@@ -225,7 +222,7 @@ const create = (config: McpAggregatorConfig, deps?: AggregatorDeps) => {
               }
 
               existingNames.add(finalName)
-              // eslint-disable-next-line functional/immutable-data
+
               toolRouting[finalName] = { client, originalName: tool.name }
 
               return {

@@ -4,7 +4,6 @@ import { create as createServices } from './services.js'
 import type { AggregatorDeps } from './services.js'
 
 const create = (config: McpAggregatorConfig, deps?: AggregatorDeps) => {
-  // eslint-disable-next-line functional/no-let
   let services: ReturnType<typeof createServices> | undefined
 
   return {

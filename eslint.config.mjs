@@ -182,27 +182,35 @@ export default [
       'object-shorthand': 0,
       'prefer-rest-params': 0,
       semi: ['error', 'never'],
-      'functional/immutable-data': [
-        'error',
-        {
-          ignoreAccessorPattern: 'module.exports*',
-        },
-      ],
-      'functional/no-let': ['error'],
+      // Disabled: accumulating into a local array is ordinary code. Flagging
+      // push() pushes authors toward needlessly indirect shapes.
+      'functional/immutable-data': 0,
+      // Disabled: let is required for values assigned across a try boundary
+      // and for accumulators. const is still preferred where it fits.
+      'functional/no-let': 0,
       'functional/prefer-property-signatures': ['error'],
       'functional/prefer-readonly-type': 0,
       'functional/prefer-immutable-types': 0,
-      'functional/prefer-tacit': ['error'],
-      'functional/no-classes': ['error'],
+      // Disabled: point-free is a style preference, not a correctness rule,
+      // and it often makes a named wrapper clearer to the reader.
+      'functional/prefer-tacit': 0,
+      // Disabled: classes are the standard idiom for stateful I/O objects
+      // (a listener, a provider, a token store). The other rules in this block
+      // stay on.
+      'functional/no-classes': 0,
       'functional/no-mixed-type': 0,
-      'functional/no-this-expressions': ['error'],
+      'functional/no-this-expressions': 0,
       'functional/no-conditional-statements': 0,
       'functional/no-expression-statement': 0,
-      'functional/no-loop-statements': ['error'],
+      // Disabled: for..of over a small set is the readable form; forcing
+      // map/reduce here obscures intent.
+      'functional/no-loop-statements': 0,
       'functional/no-return-void': 0,
       'functional/no-promise-reject': 0,
       'functional/no-throw-statement': 0,
-      'functional/no-try-statements': ['error'],
+      // Disabled: banning try/catch in I/O code removes the only sound way
+      // to handle a rejected socket, a missing file, or a bad response.
+      'functional/no-try-statements': 0,
       'functional/readonly-type': ['error'],
       'functional/functional-parameters': 0,
       'import/no-unresolved': ['error'],

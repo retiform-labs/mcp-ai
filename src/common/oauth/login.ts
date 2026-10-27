@@ -26,10 +26,9 @@ import type { AddressInfo } from 'node:net'
 import { readFileSync } from 'node:fs'
 import { auth } from '@modelcontextprotocol/sdk/client/auth.js'
 import type { OAuthClientProvider } from '@modelcontextprotocol/sdk/client/auth.js'
-import { createOAuthProvider, parseScope, readState } from './provider.js'
 import type { OAuthClientConfig } from '../types.js'
+import { createOAuthProvider, parseScope, readState } from './provider.js'
 
-/** Default window for a human to finish a consent screen. */
 /**
  * Default window for a human to finish a consent screen.
  *
@@ -37,8 +36,22 @@ import type { OAuthClientConfig } from '../types.js'
  * operator could act: reading a message, switching to a browser, and consenting
  * through a bank UI is not a 10-minute round trip, and an expired listener
  * leaves a dead URL that looks like a broken port.
+ *
+ * The factors below are named so the window cannot be misread as a literal
+ * millisecond count.
  */
-export const DEFAULT_LOGIN_TIMEOUT_MS = 30 * 60 * 1000
+const SECONDS_PER_MINUTE = 60
+const LOGIN_WINDOW_MINUTES = 30
+const MS_PER_SECOND = 1000
+const MS_PER_MINUTE = SECONDS_PER_MINUTE * MS_PER_SECOND
+
+/** HTTP status codes answered to the callback listener. Named because a bare
+ * 400 inside a response body reads as an accident rather than a decision. */
+const HTTP_OK = 200
+const HTTP_BAD_REQUEST = 400
+const HTTP_NOT_FOUND = 404
+
+export const DEFAULT_LOGIN_TIMEOUT_MS = LOGIN_WINDOW_MINUTES * MS_PER_MINUTE
 
 export type LoginResult = Readonly<{
   tokenFile: string
@@ -138,7 +151,7 @@ export const awaitCallback = (
       // answer instead of being passed through as if it might be the code --
       // favicon requests and stray probes both land here.
       if (url.pathname !== expectedPath) {
-        res.writeHead(404, { 'content-type': 'text/plain' })
+        res.writeHead(HTTP_NOT_FOUND, { 'content-type': 'text/plain' })
         res.end(
           'Reached the OAuth login listener. This is not the callback path, so ' +
             'nothing was consumed -- that is expected. The listener is reachable ' +
@@ -150,7 +163,7 @@ export const awaitCallback = (
       const error = url.searchParams.get('error')
       if (error) {
         const description = url.searchParams.get('error_description') ?? ''
-        res.writeHead(400, { 'content-type': 'text/plain' })
+        res.writeHead(HTTP_BAD_REQUEST, { 'content-type': 'text/plain' })
         res.end(`Authorization failed: ${error}\n`)
         finish(
           new Error(
@@ -165,7 +178,7 @@ export const awaitCallback = (
       // forged callback would be indistinguishable from a real one.
       const returnedState = url.searchParams.get('state') ?? undefined
       if (expectedState !== undefined && returnedState !== expectedState) {
-        res.writeHead(400, { 'content-type': 'text/plain' })
+        res.writeHead(HTTP_BAD_REQUEST, { 'content-type': 'text/plain' })
         res.end('Authorization failed: state mismatch.\n')
         finish(
           new Error(
@@ -178,13 +191,13 @@ export const awaitCallback = (
 
       const code = url.searchParams.get('code')
       if (!code) {
-        res.writeHead(400, { 'content-type': 'text/plain' })
+        res.writeHead(HTTP_BAD_REQUEST, { 'content-type': 'text/plain' })
         res.end('Authorization failed: no code in the callback.\n')
         finish(new Error('The callback carried no authorization code.'))
         return
       }
 
-      res.writeHead(200, { 'content-type': 'text/plain' })
+      res.writeHead(HTTP_OK, { 'content-type': 'text/plain' })
       res.end('Authorization received. You can close this window.\n')
       log('[login] authorization code received')
       finish(null, code)
@@ -193,7 +206,7 @@ export const awaitCallback = (
     const timer = setTimeout(() => {
       finish(
         new Error(
-          `Timed out after ${Math.round(timeoutMs / 1000)}s waiting for the authorization callback on port ${port}. ` +
+          `Timed out after ${Math.round(timeoutMs / MS_PER_SECOND)}s waiting for the authorization callback on port ${port}. ` +
             `The browser must run on THIS host (loopback redirect), and the window must be left open until it ` +
             `shows the confirmation page.`
         )

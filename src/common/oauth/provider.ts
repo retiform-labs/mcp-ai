@@ -44,6 +44,11 @@ import type { OAuthClientConfig } from '../types.js'
 
 /** File mode we insist on: owner read/write only. */
 const TOKEN_FILE_MODE = 0o600
+/** Bytes of randomness in the temp-file suffix: 12 hex chars, ample to avoid
+ * a collision between two concurrent writers. */
+const TEMP_SUFFIX_BYTES = 6
+/** Bytes of randomness in an OAuth state value (128 bits). */
+const STATE_BYTES = 16
 
 /**
  * Bits that must be absent for a token file to be considered private.
@@ -51,6 +56,10 @@ const TOKEN_FILE_MODE = 0o600
  * 0o400 (read-only) and still pass, which is a legitimate posture.
  */
 const FORBIDDEN_MODE_BITS = 0o077
+/** Permission bits, named so the diagnostic message reads as intent. */
+const PERMISSION_BITS = 0o777
+/** Radix for rendering an octal file mode back to a human. */
+const OCTAL_RADIX = 8
 
 /** On-disk shape. Every slot is optional so a partial file is surviveable. */
 type StoredState = {
@@ -134,7 +143,7 @@ export const readState = async (tokenFile: string): Promise<StoredState> => {
   const forbidden = stat.mode & FORBIDDEN_MODE_BITS
   if (forbidden !== 0) {
     throw new OAuthCredentialError(
-      `Refusing to read '${tokenFile}': mode ${(stat.mode & 0o777).toString(8)} grants access to group or other. ` +
+      `Refusing to read '${tokenFile}': mode ${(stat.mode & PERMISSION_BITS).toString(OCTAL_RADIX)} grants access to group or other. ` +
         `This file can hold a token that authorizes real actions. Run: chmod 600 '${tokenFile}'`
     )
   }
@@ -171,7 +180,7 @@ export const writeState = async (
   // Random suffix so two concurrent writers cannot collide on the temp name.
   const tmp = path.join(
     dir,
-    `.${path.basename(tokenFile)}.${randomBytes(6).toString('hex')}.tmp`
+    `.${path.basename(tokenFile)}.${randomBytes(TEMP_SUFFIX_BYTES).toString('hex')}.tmp`
   )
   const body = JSON.stringify(state, null, 2)
 
@@ -358,7 +367,7 @@ export const createOAuthProvider = (
     async state(): Promise<string> {
       // A fresh value per authorization attempt, persisted before the browser
       // leaves so the return trip can be compared against it.
-      const value = randomBytes(16).toString('hex')
+      const value = randomBytes(STATE_BYTES).toString('hex')
       await commit(s => ({ ...s, oauthState: value }))
       return value
     },
@@ -395,6 +404,11 @@ export const createOAuthProvider = (
           return { ...state, codeVerifier: undefined, oauthState: undefined }
         case 'discovery':
           return { ...state, discoveryState: undefined }
+        default:
+          // Unreachable by type, but returning state keeps the reducer total:
+          // a future scope value invalidates nothing rather than dropping
+          // every credential the file holds.
+          return state
       }
     })
   }

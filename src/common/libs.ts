@@ -107,7 +107,6 @@ const createStringifiedPreprocessor = (innerType: ZodType): ZodType => {
   return z.preprocess(val => {
     // If it's a string, try to parse it as JSON
     if (typeof val === 'string') {
-      // eslint-disable-next-line functional/no-try-statements
       try {
         return JSON.parse(val)
       } catch {

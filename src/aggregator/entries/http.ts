@@ -61,7 +61,7 @@ const create = (config: McpAggregatorHttpConfig, options?: ExpressOptions) => {
     (features: any) => async (req: express.Request, res: express.Response) => {
       // Check for existing session ID
       const sessionId = req.headers['mcp-session-id'] as string | undefined
-      // eslint-disable-next-line functional/no-let
+
       let transport: StreamableHTTPServerTransport
 
       if (sessionId && transports[sessionId]) {
@@ -75,16 +75,15 @@ const create = (config: McpAggregatorHttpConfig, options?: ExpressOptions) => {
           enableJsonResponse: true,
           onsessioninitialized: sessionId => {
             // Store the transport by session ID
-            // eslint-disable-next-line functional/immutable-data
+
             transports[sessionId] = transport
           },
         })
 
         // Clean up transport when closed
-        // eslint-disable-next-line functional/immutable-data
+
         transport.onclose = () => {
           if (transport.sessionId) {
-            // eslint-disable-next-line functional/immutable-data
             delete transports[transport.sessionId]
           }
         }
